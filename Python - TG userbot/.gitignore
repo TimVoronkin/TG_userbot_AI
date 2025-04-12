@@ -2,3 +2,4 @@ config.py
 test/
 my_userbot.session
 desktop.ini
+__pycache__/
