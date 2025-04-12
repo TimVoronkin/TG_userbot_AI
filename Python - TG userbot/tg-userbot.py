@@ -163,7 +163,18 @@ async def echo(update: Update, context: CallbackContext) -> None:
             messages = []
             async for msg in app.get_chat_history(chat_id, limit=msg_count):  # Асинхронная итерация
                 messages.append(msg)
+
+                # Формируем ASCII прогресс-бар
+                progress_bar_length = 30  # Длина прогресс-бара
+                progress = int((len(messages) / msg_count) * progress_bar_length)  # 20 символов в прогресс-баре
+                progress_bar = f"{'█' * progress}{'░' * (progress_bar_length - progress)}" 
+
+                # Обновляем сообщение с прогрессом
+                await processing_message.edit_text(result + f"\n⏳ Loading... {len(messages)}/{msg_count}\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%", parse_mode="HTML")
+
                 await asyncio.sleep(1)  # Задержка между запросами для предотвращения превышения лимита API
+
+
 
             if messages:
                 my_chat_histoty = ""  # Переменная для хранения истории чата
