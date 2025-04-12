@@ -115,7 +115,7 @@ async def ai_query(update: Update, context: CallbackContext) -> None:
         # Проверяем, есть ли запрос после команды
         if context.args:
             query = " ".join(context.args)  # Объединяем аргументы в строку
-            processing_message = await update.message.reply_text("Processing your AI query...")
+            processing_message = await update.message.reply_text("⏳ Processing your AI query...")
 
             try:
                 # Отправляем запрос в Geminy
@@ -143,13 +143,13 @@ async def echo(update: Update, context: CallbackContext) -> None:
         # Разделяем сообщение на строки
         try:
             lines = update.message.text.split("\n")
-            chat_id = lines[0].strip()  # Первый рядок — chat_id
+            chat_id = lines[0].strip()
             try:
-                msg_count = int(lines[1].strip())  # Второй рядок — msg_count
+                msg_count = int(lines[1].strip())
             except (IndexError, ValueError):
                 msg_count = 10  # Если второй строки нет или она некорректна, используем значение по умолчанию
         except (IndexError, ValueError):
-            await processing_message.edit_text("Error: Invalid input format. Please provide chat_id on the first line and msg_count on the second line.")
+            await processing_message.edit_text("⚠️ Error: Invalid input format. Please provide chat_id on the first line and msg_count on the second line.")
             return
 
         # Основная логика Pyrogram
@@ -224,7 +224,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     shortened_history = my_chat_histoty
 
                 result += f"<blockquote expandable>{shortened_history}</blockquote>"
-                result += "\n🤖 AI Summary:\n"
+                result += "\n✨ AI Summary:\n"
 
                 await processing_message.edit_text(result + '\n⏳ Loading...', parse_mode="HTML")
 
@@ -236,7 +236,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     )
                     result += f"<blockquote>{bleach.clean(markdown.markdown(ai_response.text), tags=allowed_tags, strip=True)}</blockquote>"
                 except Exception as e:
-                    result += f"Error: {e}"
+                    result += f"⚠️ Error: {e}"
 
             else:
                 result = f"⚠️ The chat with ID {chat_id} is empty or unavailable."
