@@ -1,0 +1,18 @@
+# Игнорировать все файлы
+*
+
+# Исключения
+!tg-userbot.py
+!readme.txt
+!.gitignore
+
+# Игнорировать системные файлы Windows
+desktop.ini
+
+# Игнорировать кеши Python
+__pycache__/
+*.pyc
+
+# Игнорировать сессии Telegram
+*.session
+*.session-journal
