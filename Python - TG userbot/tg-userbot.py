@@ -13,12 +13,16 @@ from config import admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_k
 
 # Инициализация клиента Geminy
 AI_client = genai.Client(api_key=AI_api_key)
-AI_prompt = "Сократи переписку до сути, расскажи темы, ключевые идеи, интересные повороты, стиль общения участников. Без воды, дружелюбно и понятно."
+AI_prompt = "Очень коротко выдели главные темы, идеи, люди итд в этой переписке. Напиши пукнтами, без форматирования"
 
 lines_crop = 10 * 3  # Количество строк для отображения в сокращённой версии истории чата. 3 потому что обычно 3 строки на сообщение
 
 # Инициализация клиента Pyrogram
 app = Client("my_userbot", api_id=TG_api_id, api_hash=TG_api_hash)
+
+# Хранилище истории диалогов
+dialog_history = {}
+my_chat_histoty = "No chat history available."
 
 # команда /start
 async def start(update: Update, context: CallbackContext) -> None:
@@ -111,145 +115,209 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
 # команда /ai
 async def ai_query(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
+    user_id = update.message.from_user.id  # Уникальный идентификатор пользователя
+
     if update.message.from_user.username == admin_username:
         # Проверяем, есть ли запрос после команды
         if context.args:
             query = " ".join(context.args)  # Объединяем аргументы в строку
-            processing_message = await update.message.reply_text("⏳ Processing your AI query...")
+            processing_message = await update.message.reply_text("⏳ Processing answer...")
+
+            # Инициализируем историю диалога, если её нет
+            if user_id not in dialog_history:
+                dialog_history[user_id] = []
+
+            # Добавляем запрос пользователя в историю
+            dialog_history[user_id].append(f"User: {query}")
 
             try:
+                # Формируем полный контекст для ИИ
+                context_for_ai = "\n".join(dialog_history[user_id])
+
                 # Отправляем запрос в Geminy
-                response = AI_client.models.generate_content(
+                ai_response = AI_client.models.generate_content(
                     model="gemini-2.0-flash",
-                    contents=query,
+                    contents=context_for_ai,
                 )
 
-                # Получаем текст ответа
-                ai_response = response.text
-                await processing_message.edit_text(f"🤖 AI Response:\n<blockquote>{ai_response}</blockquote>", parse_mode="HTML")
+                # Проверяем, является ли response строкой или объектом
+                response = ai_response if isinstance(ai_response, str) else ai_response.text
+
+                # Добавляем ответ ИИ в историю
+                dialog_history[user_id].append(f"AI: {response}")
+
+                # Ограничиваем длину истории до 20 сообщений
+                if len(dialog_history[user_id]) > 20:
+                    dialog_history[user_id] = dialog_history[user_id][-20:]
+
+                # Отправляем ответ пользователю
+                await processing_message.edit_text(
+                    f"🤖 AI Response:\n<blockquote>{bleach.clean(markdown.markdown(response), tags=allowed_tags, strip=True)}</blockquote>",
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
             except Exception as e:
-                # Обрабатываем ошибки
                 await processing_message.edit_text(f"⚠️ An error occurred while processing your query: {e}")
         else:
             await update.message.reply_text("⚠️ Please provide a query after the /ai command.")
+
+# команда /ai_clean
+async def ai_clean(update: Update, context: CallbackContext) -> None:
+    print("dialog_history:\n"+str(dialog_history))
+    user_id = update.message.from_user.id
+    if user_id in dialog_history:
+        del dialog_history[user_id]
+    await update.message.reply_text("🗑️ AI dialogue history cleared.")
+    print("🗑️ AI dialogue history cleared.")
 
 # Основные сообщения
 async def echo(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
     # Проверка, что сообщение отправлено мной
     if update.message.from_user.username == admin_username:
-        processing_message = await update.message.reply_text("⏳ Loading...")
 
-        # Разделяем сообщение на строки
-        try:
-            lines = update.message.text.split("\n")
-            chat_id = lines[0].strip()
+        # ОТВЕТНОЕ СООБЩЕНИЕ
+        if update.message.reply_to_message:
+            global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
+
+            AI_prompt_in_message = update.message.text
+            print("AI_prompt_in_message:\n"+AI_prompt_in_message)
+            result = "🤖 AI Summary:\n"
+            processing_message = await update.message.reply_text(result+"⏳ Loading...", parse_mode="HTML") #, reply_to_message_id=update.message.message_id
+
+            # Отправляем запрос в Geminy
             try:
-                msg_count = int(lines[1].strip())
+                ai_response = AI_client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=f"{AI_prompt_in_message}\n\n{my_chat_histoty}",
+                )
+                response = ai_response if isinstance(ai_response, str) else ai_response.text
+                result += f"<blockquote>{bleach.clean(markdown.markdown(response), tags=allowed_tags, strip=True)}</blockquote>"
+            except Exception as e:
+                result += f"⚠️ Error: {e}"
+            
+            # Редактируем сообщение после завершения обработки
+            await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
+
+        
+        # ЗАПРОС
+        else:
+
+            # Отправляем сообщение 1
+            processing_message = await update.message.reply_text("⏳ Loading...")
+
+            # Разделяем сообщение на строки
+            try:
+                lines = update.message.text.split("\n")
+                chat_id = lines[0].strip()
+                try:
+                    msg_count = int(lines[1].strip())
+                except (IndexError, ValueError):
+                    msg_count = 10  # Если второй строки нет или она некорректна, используем значение по умолчанию
             except (IndexError, ValueError):
-                msg_count = 10  # Если второй строки нет или она некорректна, используем значение по умолчанию
-        except (IndexError, ValueError):
-            await processing_message.edit_text("⚠️ Error: Invalid input format. Please provide chat_id on the first line and msg_count on the second line.")
-            return
+                await processing_message.edit_text("⚠️ Error: Invalid input format. Please provide chat_id on the first line and msg_count on the second line.")
+                return
 
-        # Основная логика Pyrogram
-        try:
-            # Получаем информацию о чате
-            chat = await app.get_chat(chat_id)  # Убрано использование async with
-            result = f"💬 ''{chat.title or chat.first_name}''\n🆔 <code>{chat_id}</code>\n#️⃣ last {msg_count} messages:\n"
-            await processing_message.edit_text(result + '\n⏳ Loading...', parse_mode="HTML")
-
-            # Получаем последние сообщения из чата
-            messages = []
-            async for msg in app.get_chat_history(chat_id, limit=msg_count):  # Асинхронная итерация
-                messages.append(msg)
-
-                # Формируем ASCII прогресс-бар
-                progress_bar_length = 30  # Длина прогресс-бара
-                progress = int((len(messages) / msg_count) * progress_bar_length)  # 20 символов в прогресс-баре
-                progress_bar = f"{'█' * progress}{'░' * (progress_bar_length - progress)}" 
-
-                # Обновляем сообщение с прогрессом
-                await processing_message.edit_text(result + f"\n⏳ Loading... {len(messages)}/{msg_count}\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%", parse_mode="HTML")
-
-                await asyncio.sleep(1)  # Задержка между запросами для предотвращения превышения лимита API
-
-
-
-            if messages:
-                my_chat_histoty = ""  # Переменная для хранения истории чата
-                for msg in reversed(messages):  # Переворачиваем список для вывода в порядке от старых к новым
-                    sender_name = msg.from_user.first_name if msg.from_user else "Unknown user"
-                    message_time = msg.date.strftime('%Y-%m-%d %H:%M') if msg.date else "Unknown time"
-
-                    # Определяем тип сообщения
-                    if msg.text:
-                        content = msg.text
-                    elif msg.photo:
-                        content = f"(image) {msg.caption or ''}"
-                    elif msg.sticker:
-                        content = f"({msg.sticker.emoji or ''} sticker)"
-                    elif msg.video:
-                        content = f"(video) {msg.caption or ''}"
-                    elif msg.voice:
-                        content = f"(voice message, {msg.voice.duration} sec long) {msg.caption or ''}"
-                    elif msg.video_note:
-                        content = f"(video message, {msg.video_note.duration} sec long)"
-                    elif msg.document:
-                        content = f"(document) {msg.document.file_name or ''}"
-                    elif msg.animation:
-                        content = "(GIF animation)"
-                    elif msg.location:
-                        content = f"(location: {msg.location.latitude}, {msg.location.longitude} )"
-                    elif msg.poll:
-                        options = ", ".join([f'"{option.text}"' for option in msg.poll.options])  # Извлекаем текст из каждого варианта
-                        content = f"(poll ''{msg.poll.question}'', with options: {options})"
-                    elif msg.new_chat_members:
-                        content = f"({', '.join([member.first_name for member in msg.new_chat_members])} joined the chat)"
-                    elif msg.left_chat_member:
-                        content = f"({msg.left_chat_member.first_name} left the chat)"
-                    else:
-                        content = "(unknown message type)"
-
-                    # Формируем строку для текущего сообщения
-                    my_chat_histoty += f"[{sender_name} at {message_time}]:\n{content}\n\n"
-
-                # Формируем сокращённую версию истории чата
-                lines = my_chat_histoty.splitlines()
-                if len(lines) > lines_crop * 2:
-                    # Берём первые 20 строк, добавляем информацию о количестве строк, и последние 20 строк
-                    shortened_history = "\n".join(lines[:lines_crop]) + f"\n\n...and {len(lines) - lines_crop * 2} more lines...\n\n\n" + "\n".join(lines[-lines_crop:])
-                else:
-                    # Если строк меньше 40, отправляем всё
-                    shortened_history = my_chat_histoty
-
-                result += f"<blockquote expandable>{shortened_history}</blockquote>"
-                result += "\n✨ AI Summary:\n"
-
+            # Основная логика Pyrogram
+            try:
+                # Получаем информацию о чате
+                chat = await app.get_chat(chat_id)  # Убрано использование async with
+                result = f"💬 ''{chat.title or chat.first_name}''\n🆔 <code>{chat_id}</code>\n#️⃣ last {msg_count} messages:\n"
                 await processing_message.edit_text(result + '\n⏳ Loading...', parse_mode="HTML")
 
-                # Отправляем историю чата в ИИ
-                try:
-                    ai_response = AI_client.models.generate_content(
-                        model="gemini-2.0-flash",
-                        contents=f"{AI_prompt}\n\n{my_chat_histoty}",
-                    )
-                    result += f"<blockquote>{bleach.clean(markdown.markdown(ai_response.text), tags=allowed_tags, strip=True)}</blockquote>"
-                except Exception as e:
-                    result += f"⚠️ Error: {e}"
+                # Получаем последние сообщения из чата
+                messages = []
+                async for msg in app.get_chat_history(chat_id, limit=msg_count):  # Асинхронная итерация
+                    messages.append(msg)
 
-            else:
-                result = f"⚠️ The chat with ID {chat_id} is empty or unavailable."
+                    # Формируем ASCII прогресс-бар
+                    progress_bar_length = 30  # Длина прогресс-бара
+                    progress = int((len(messages) / msg_count) * progress_bar_length)  # 20 символов в прогресс-баре
+                    progress_bar = f"{'█' * progress}{'░' * (progress_bar_length - progress)}" 
+
+                    # Обновляем сообщение с прогрессом
+                    await processing_message.edit_text(result + f"\n⏳ Loading... {len(messages)}/{msg_count}\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%", parse_mode="HTML")
+
+                    await asyncio.sleep(1)  # Задержка между запросами для предотвращения превышения лимита API
+
+                if messages:
+                    my_chat_histoty = ""  # Переменная для хранения истории чата
+                    for msg in reversed(messages):  # Переворачиваем список для вывода в порядке от старых к новым
+                        sender_name = msg.from_user.first_name if msg.from_user else "Unknown user"
+                        message_time = msg.date.strftime('%Y-%m-%d %H:%M') if msg.date else "Unknown time"
+
+                        # Определяем тип сообщения
+                        if msg.text:
+                            content = msg.text
+                        elif msg.photo:
+                            content = f"(image) {msg.caption or ''}"
+                        elif msg.sticker:
+                            content = f"({msg.sticker.emoji or ''} sticker)"
+                        elif msg.video:
+                            content = f"(video) {msg.caption or ''}"
+                        elif msg.voice:
+                            content = f"(voice message, {msg.voice.duration} sec long) {msg.caption or ''}"
+                        elif msg.video_note:
+                            content = f"(video message, {msg.video_note.duration} sec long)"
+                        elif msg.document:
+                            content = f"(document) {msg.document.file_name or ''}"
+                        elif msg.animation:
+                            content = "(GIF animation)"
+                        elif msg.location:
+                            content = f"(location: {msg.location.latitude}, {msg.location.longitude} )"
+                        elif msg.poll:
+                            options = ", ".join([f'"{option.text}"' for option in msg.poll.options])  # Извлекаем текст из каждого варианта
+                            content = f"(poll ''{msg.poll.question}'', with options: {options})"
+                        elif msg.new_chat_members:
+                            content = f"({', '.join([member.first_name for member in msg.new_chat_members])} joined the chat)"
+                        elif msg.left_chat_member:
+                            content = f"({msg.left_chat_member.first_name} left the chat)"
+                        else:
+                            content = "(unknown message type)"
+
+                        # Формируем строку для текущего сообщения
+                        my_chat_histoty += f"[{sender_name} at {message_time}]:\n{content}\n\n"
+
+                    # Формируем сокращённую версию истории чата
+                    lines = my_chat_histoty.splitlines()
+                    if len(lines) > lines_crop * 2:
+                        # Берём первые 20 строк, добавляем информацию о количестве строк, и последние 20 строк
+                        shortened_history = "\n".join(lines[:lines_crop]) + f"\n\n...and {len(lines) - lines_crop * 2} more lines...\n\n\n" + "\n".join(lines[-lines_crop:])
+                    else:
+                        # Если строк меньше 40, отправляем всё
+                        shortened_history = my_chat_histoty
+
+                    result += f"<blockquote expandable>{shortened_history}</blockquote>"
+                    await processing_message.edit_text(result, parse_mode="HTML")
+
+                else:
+                    result = f"⚠️ The chat with ID {chat_id} is empty or unavailable."
+                    print(result)
+            except PeerIdInvalid:
+                result = f"⚠️ Error: The chat with ID {chat_id} is unavailable."
                 print(result)
-        except PeerIdInvalid:
-            result = f"⚠️ Error: The chat with ID {chat_id} is unavailable."
-            print(result)
-        except Exception as e:
-            result = f"⚠️ An error occurred: {e}"
-            print(result)
+            except Exception as e:
+                result = f"⚠️ An error occurred: {e}"
+                print(result)
 
-        # Редактируем сообщение после завершения обработки
-        await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
+
+            # Отправляем сообщение 2
+            result = "🤖 AI Summary:\n"
+            processing_message = await update.message.reply_text(result+"⏳ Loading...", parse_mode="HTML") #, reply_to_message_id=update.message.message_id
+
+            # Отправляем запрос в Geminy
+            try:
+                ai_response = AI_client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=f"{AI_prompt}\n\n{my_chat_histoty}",
+                )
+                response = ai_response if isinstance(ai_response, str) else ai_response.text
+                result += f"<blockquote>{bleach.clean(markdown.markdown(response), tags=allowed_tags, strip=True)}</blockquote>"
+            except Exception as e:
+                result += f"⚠️ Error: {e}"
+            
+            # Редактируем сообщение после завершения обработки
+            await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
 # Логирование всех сообщений
 async def log_message(update: Update, context: CallbackContext) -> None:
@@ -265,6 +333,17 @@ def log_to_console(update: Update) -> None:
     if update.message.from_user.username != admin_username:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
+# команда /id
+async def reply_id(update: Update, context: CallbackContext) -> None:
+    log_to_console(update)
+    if update.message.from_user.username == admin_username:
+
+        if update.message.reply_to_message:
+            replied_message_id = update.message.reply_to_message.message_id
+            await update.message.reply_text(f"🆔 The ID of the replied message is: {replied_message_id}")
+        else:
+            await update.message.reply_text("⚠️ Please reply to a message to use this command.")
+
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
@@ -276,6 +355,8 @@ def main() -> None:
     application.add_handler(CommandHandler("ping", ping))
     application.add_handler(CommandHandler("list", list_chats))
     application.add_handler(CommandHandler("ai", ai_query))
+    application.add_handler(CommandHandler("ai_clean", ai_clean))
+    application.add_handler(CommandHandler("id", reply_id))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
     application.add_handler(MessageHandler(filters.ALL, log_message))
 
