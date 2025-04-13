@@ -238,7 +238,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     # Обновляем сообщение с прогрессом
                     await processing_message.edit_text(result + f"\n⏳ Loading... {len(messages)}/{msg_count}\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%", parse_mode="HTML")
 
-                    await asyncio.sleep(1)  # Задержка между запросами для предотвращения превышения лимита API
+                    await asyncio.sleep(0.1)  # Задержка между запросами для предотвращения превышения лимита API
 
                 if messages:
                     my_chat_histoty = ""  # Переменная для хранения истории чата
