@@ -376,6 +376,16 @@ def main() -> None:
     application.add_handler(CommandHandler("id", reply_id))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
     application.add_handler(MessageHandler(filters.ALL, log_message))
+    
+    ''' Для телеграм бота команды:
+    list - <n> show recent chats (default: 5 chats)
+    ping - check the bot's connectivity
+    start - test
+    id - test. get the ID of the replied message
+    ai -  test. Ask AI Gemini directly
+    ai_clean -  test. Clear the AI dialogue history
+    '''
+
 
     # Запускаем клиента Pyrogram
     app.start()  # Открываем соединение с Pyrogram
