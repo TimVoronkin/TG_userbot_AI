@@ -206,7 +206,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
             # Отправляем сообщение 1
             processing_message = await update.message.reply_text("⏳ Loading...")
 
-            # Разделяем сообщение на строки
+            # Читаем сообщение пользователя
             try:
                 lines = update.message.text.split("\n")
                 chat_id = lines[0].strip()
@@ -287,8 +287,25 @@ async def echo(update: Update, context: CallbackContext) -> None:
                         # Если строк меньше 40, отправляем всё
                         shortened_history = my_chat_histoty
 
-                    result += f"<blockquote expandable>{shortened_history}</blockquote>"
-                    await processing_message.edit_text(result, parse_mode="HTML")
+                    if messages:
+                        first_message = messages[-1]
+                        first_message_link = f"https://t.me/c/{str(chat.id)[3:]}/{first_message.id}" if chat.type in [ChatType.SUPERGROUP, ChatType.CHANNEL] else ""
+                        time_since_first_message = datetime.now() - first_message.date
+                    
+                        # Форматируем время в зависимости от продолжительности
+                        if time_since_first_message.days > 0:
+                            time_since_str = f"{time_since_first_message.days} days ago"
+                        elif time_since_first_message.seconds >= 3600:
+                            time_since_str = f"{time_since_first_message.seconds // 3600} hours ago"
+                        elif time_since_first_message.seconds >= 60:
+                            time_since_str = f"{time_since_first_message.seconds // 60} minutes ago"
+                        else:
+                            time_since_str = "just now"
+                    
+                        result += f"🔝 <a href='{first_message_link}'>First message</a> {time_since_str}" if first_message_link else f"🔝 First message was sent {time_since_str}, but link is unavailable"
+                        result += f"<blockquote expandable>{shortened_history}</blockquote>"
+
+                    await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
                 else:
                     result = f"⚠️ The chat with ID {chat_id} is empty or unavailable."
