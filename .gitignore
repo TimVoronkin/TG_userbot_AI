@@ -2,9 +2,10 @@
 *
 
 # Исключения
-!tg-userbot.py
-!readme.txt
 !.gitignore
+!readme.txt
+!/Python - TG userbot
+!tg-userbot.py
 
 # Игнорировать системные файлы Windows
 desktop.ini
