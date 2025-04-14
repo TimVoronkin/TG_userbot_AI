@@ -9,7 +9,20 @@ import markdown # type: ignore
 import bleach # type: ignore
 allowed_tags = ['b', 'i', 'u', 'code', 'pre', 'a', 'blockquote']
 from google import genai  # Импортируем библиотеку для работы с Geminy
-from config import admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key  # Импортируем конфиденциальные данные
+
+# from config import admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key  # Импортируем конфиденциальные данные
+import os
+
+admin_username = os.getenv("admin_username")
+TG_api_id = os.getenv("TG_api_id")
+TG_api_hash = os.getenv("TG_api_hash")
+TGbot_token = os.getenv("TGbot_token")
+AI_api_key = os.getenv("AI_api_key")
+
+if not all([admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
+    raise ValueError("One or more environment variables are missing!")
+
+
 
 # Инициализация клиента Geminy
 AI_client = genai.Client(api_key=AI_api_key)
