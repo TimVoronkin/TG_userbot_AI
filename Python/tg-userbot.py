@@ -12,13 +12,11 @@ from google import genai  # Импортируем библиотеку для �
 
 # from config import admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key  # Импортируем конфиденциальные данные
 import os
-
 admin_username = os.getenv("admin_username")
 TG_api_id = os.getenv("TG_api_id")
 TG_api_hash = os.getenv("TG_api_hash")
 TGbot_token = os.getenv("TGbot_token")
 AI_api_key = os.getenv("AI_api_key")
-
 if not all([admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more environment variables are missing!")
 
@@ -89,6 +87,11 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
             # Получаем последние чаты
             dialogs = []
             async for dialog in app.get_dialogs(limit=limit):  # Убрано использование async with
+                
+                # Пропускаем архивированные чаты
+                if dialog.chat.is_archived:
+                    continue
+
                 display_name = dialog.chat.title if dialog.chat.title else (dialog.chat.first_name or '') + ' ' + (dialog.chat.last_name or '')
 
                 # Определяем иконку в зависимости от типа чата
@@ -182,6 +185,17 @@ async def ai_clean(update: Update, context: CallbackContext) -> None:
         del dialog_history[user_id]
     await update.message.reply_text("🗑️ AI dialogue history cleared.")
     print("🗑️ AI dialogue history cleared.")
+
+# команда /id
+async def reply_id(update: Update, context: CallbackContext) -> None:
+    log_to_console(update)
+    if update.message.from_user.username == admin_username:
+
+        if update.message.reply_to_message:
+            replied_message_id = update.message.reply_to_message.message_id
+            await update.message.reply_text(f"🆔 The ID of the replied message is: {replied_message_id}")
+        else:
+            await update.message.reply_text("⚠️ Please reply to a message to use this command.")
 
 # Основные сообщения
 async def echo(update: Update, context: CallbackContext) -> None:
@@ -362,17 +376,6 @@ def log_to_console(update: Update) -> None:
     print(f"\n🗨️ [{current_time} @{username}]\n{message_text}")
     if update.message.from_user.username != admin_username:
         print(f"⚠️ Message from an unknown user. Ignored.")
-
-# команда /id
-async def reply_id(update: Update, context: CallbackContext) -> None:
-    log_to_console(update)
-    if update.message.from_user.username == admin_username:
-
-        if update.message.reply_to_message:
-            replied_message_id = update.message.reply_to_message.message_id
-            await update.message.reply_text(f"🆔 The ID of the replied message is: {replied_message_id}")
-        else:
-            await update.message.reply_text("⚠️ Please reply to a message to use this command.")
 
 
 # Основная функция для запуска Telegram-бота
