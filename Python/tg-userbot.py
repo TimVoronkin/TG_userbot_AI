@@ -89,7 +89,7 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
             async for dialog in app.get_dialogs(limit=limit):  # Убрано использование async with
                 
                 # Пропускаем архивированные чаты
-                if dialog.chat.is_archived:
+                if dialog.folder_id == 1:  # Проверяем, находится ли чат в архиве
                     continue
 
                 display_name = dialog.chat.title if dialog.chat.title else (dialog.chat.first_name or '') + ' ' + (dialog.chat.last_name or '')
