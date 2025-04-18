@@ -337,7 +337,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
                         result += f"🔝 <a href='{first_message_link}'>First message</a> {time_since_str}" if first_message_link else f"🔝 First message was sent {time_since_str}, but link is unavailable"
                         result += f"<blockquote expandable>{shortened_history}</blockquote>"
 
-                    await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
+                        await process_ai_summary(update, processing_message)
 
                 else:
                     result = f"⚠️ The chat with ID {chat_id} is empty or unavailable."
@@ -349,24 +349,30 @@ async def echo(update: Update, context: CallbackContext) -> None:
                 result = f"⚠️ An error occurred: {e}"
                 print(result)
 
-
-            # Отправляем сообщение 2
-            result = "🤖 AI Summary:\n"
-            processing_message = await update.message.reply_text(result+"⏳ Loading...", parse_mode="HTML") #, reply_to_message_id=update.message.message_id
-
-            # Отправляем запрос в Geminy
-            try:
-                ai_response = AI_client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=f"{AI_prompt}\n\n{my_chat_histoty}",
-                )
-                response = ai_response if isinstance(ai_response, str) else ai_response.text
-                result += f"<blockquote>{bleach.clean(markdown.markdown(response), tags=allowed_tags, strip=True)}</blockquote>"
-            except Exception as e:
-                result += f"⚠️ Error: {e}"
-            
-            # Редактируем сообщение после завершения обработки
             await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
+
+
+
+# Новая функция для обработки AI Summary
+async def process_ai_summary(update: Update, processing_message) -> None:
+    result = "🤖 AI Summary:\n"
+
+    # Отправляем запрос в Geminy
+    try:
+        ai_response = AI_client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=f"{AI_prompt}\n\n{my_chat_histoty}",
+        )
+        response = ai_response if isinstance(ai_response, str) else ai_response.text
+        result += f"<blockquote>{bleach.clean(markdown.markdown(response), tags=allowed_tags, strip=True)}</blockquote>"
+    except Exception as e:
+        result += f"⚠️ Error: {e}"
+    
+    # Редактируем сообщение после завершения обработки
+    await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
+
+
+
 
 # Логирование всех сообщений
 async def log_message(update: Update, context: CallbackContext) -> None:
