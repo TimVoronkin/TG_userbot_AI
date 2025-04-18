@@ -386,8 +386,7 @@ def log_to_console(update: Update) -> None:
 
 
 
-async def send_startup_message(update: Update, context: CallbackContext) -> None:
-    log_to_console(update)
+async def send_startup_message(update: Update) -> None:
     await update.message.reply_text('🚀 Script updated and started!')
 
 
@@ -423,7 +422,7 @@ def main() -> None:
     try:
         # Запускаем бота
         application.run_polling()
-        send_startup_message(None, None)  # Отправляем сообщение о запуске скрипта
+        send_startup_message()  # Отправляем сообщение о запуске скрипта
 
 
     finally:
