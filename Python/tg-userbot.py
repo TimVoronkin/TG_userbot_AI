@@ -419,9 +419,9 @@ def main() -> None:
     TGuserbot_app.start()  # Открываем соединение с Pyrogram
 
     try:
+        asyncio.run(TGuserbot_app.send_message(admin_id, "script just updated"))
         # Запускаем бота
         TGbot_app.run_polling()
-        asyncio.run(send_initial_message(TGbot_app))
 
         
 
