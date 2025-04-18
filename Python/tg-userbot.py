@@ -417,11 +417,14 @@ def main() -> None:
     # Запускаем клиента Pyrogram
     app.start()  # Открываем соединение с Pyrogram
 
+    # Отправляем сообщение о запуске скрипта
+    asyncio.run(app.send_message(admin_username, "🚀 Script updated and started!"))
+
+
     try:
         # Запускаем бота
         application.run_polling()
-        # Отправляем сообщение о запуске скрипта
-        asyncio.run(app.send_message(admin_username, "🚀 Script updated and started!"))
+
     finally:
         # Закрываем клиента Pyrogram при завершении работы
         app.stop()
