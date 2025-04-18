@@ -383,12 +383,12 @@ def log_to_console(update: Update) -> None:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
 # Сообщение о запуске скрипта
-async def send_initial_message(app: Application) -> None:
-    try:
-        await app.bot.send_message(chat_id=admin_id, text="🚀 Script updated and started!")
-        print(f"💬 Bot sent message to {admin_id} successfully.")
-    except Exception as e:
-        print(f"⚠️ Error sending message to {admin_id}: {e}")
+# async def send_initial_message(app: Application) -> None:
+#     try:
+#         await app.bot.send_message(chat_id=admin_id, text="🚀 Script updated and started!")
+#         print(f"💬 Bot sent message to {admin_id} successfully.")
+#     except Exception as e:
+#         print(f"⚠️ Error sending message to {admin_id}: {e}")
 
 
 # Основная функция для запуска Telegram-бота
