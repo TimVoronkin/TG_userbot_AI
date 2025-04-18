@@ -12,24 +12,25 @@ from google import genai  # Импортируем библиотеку для �
 
 # from config import admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key  # Импортируем конфиденциальные данные
 import os
-# admin_username = os.getenv("admin_username")
-admin_id = os.getenv("admin_id")
+admin_username = os.getenv("admin_username")
 TG_api_id = os.getenv("TG_api_id")
 TG_api_hash = os.getenv("TG_api_hash")
 TGbot_token = os.getenv("TGbot_token")
 AI_api_key = os.getenv("AI_api_key")
-if not all([admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
+if not all([admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more environment variables are missing!")
+
 
 # Инициализация клиента Geminy
 AI_client = genai.Client(api_key=AI_api_key)
 AI_prompt = "Очень коротко выдели главные темы, идеи, люди итд в этой переписке. Напиши пукнтами, без форматирования"
 
 lines_crop = 10 * 3  # Количество строк для отображения в сокращённой версии истории чата. 3 потому что обычно 3 строки на сообщение
+
 delay_TG = 0.5  # Задержка между запросами для предотвращения превышения лимита API
 
 # Инициализация клиента Pyrogram
-TGuserbot_app = Client("my_userbot", api_id=TG_api_id, api_hash=TG_api_hash)
+app = Client("my_userbot", api_id=TG_api_id, api_hash=TG_api_hash)
 
 # Хранилище истории диалогов
 dialog_history = {}
@@ -43,7 +44,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 # команда /ping
 async def ping(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
-    if update.message.from_user.id == admin_id:
+    if update.message.from_user.username == admin_username:
 
         results = []
         processing_message = await update.message.reply_text("\n".join(results) + "⏳ Running diagnostics...")
@@ -57,7 +58,7 @@ async def ping(update: Update, context: CallbackContext) -> None:
 
         # Check Pyrogram userbot connectivity
         try:
-            await TGuserbot_app.get_me()  # Убрано использование async with
+            await app.get_me()  # Убрано использование async with
             results.append("✅ Pyrogram userbot is working correctly.")
         except Exception as e:
             results.append(f"❌ Pyrogram userbot error: {e}")
@@ -75,7 +76,7 @@ async def ping(update: Update, context: CallbackContext) -> None:
 # команда /list
 async def list_chats(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
-    if update.message.from_user.id == admin_id:
+    if update.message.from_user.username == admin_username:
         try:
             limit = int(context.args[0]) if context.args else 5
             if limit <= 0:
@@ -86,7 +87,7 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
         try:
             # Получаем последние чаты
             dialogs = []
-            async for dialog in TGuserbot_app.get_dialogs(limit=limit):  # Убрано использование async with
+            async for dialog in app.get_dialogs(limit=limit):  # Убрано использование async with
 
                 display_name = dialog.chat.title if dialog.chat.title else (dialog.chat.first_name or '') + ' ' + (dialog.chat.last_name or '')
 
@@ -129,7 +130,7 @@ async def ai_query(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
     user_id = update.message.from_user.id  # Уникальный идентификатор пользователя
 
-    if update.message.from_user.id == admin_id:
+    if update.message.from_user.username == admin_username:
         # Проверяем, есть ли запрос после команды
         if context.args:
             query = " ".join(context.args)  # Объединяем аргументы в строку
@@ -185,7 +186,7 @@ async def ai_clean(update: Update, context: CallbackContext) -> None:
 # команда /id
 async def reply_id(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
-    if update.message.from_user.id == admin_id:
+    if update.message.from_user.username == admin_username:
 
         if update.message.reply_to_message:
             replied_message_id = update.message.reply_to_message.message_id
@@ -197,7 +198,7 @@ async def reply_id(update: Update, context: CallbackContext) -> None:
 async def echo(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
     # Проверка, что сообщение отправлено мной
-    if update.message.from_user.id == admin_id:
+    if update.message.from_user.username == admin_username:
 
         # ОТВЕТНОЕ СООБЩЕНИЕ
         if update.message.reply_to_message:
@@ -244,13 +245,13 @@ async def echo(update: Update, context: CallbackContext) -> None:
             # Основная логика Pyrogram
             try:
                 # Получаем информацию о чате
-                chat = await TGuserbot_app.get_chat(chat_id)  # Убрано использование async with
+                chat = await app.get_chat(chat_id)  # Убрано использование async with
                 result = f"💬 ''{chat.title or chat.first_name}''\n🆔 <code>{chat_id}</code>\n#️⃣ last {msg_count} messages:\n"
                 await processing_message.edit_text(result + '\n⏳ Loading...', parse_mode="HTML")
 
                 # Получаем последние сообщения из чата
                 messages = []
-                async for msg in TGuserbot_app.get_chat_history(chat_id, limit=msg_count):  # Асинхронная итерация
+                async for msg in app.get_chat_history(chat_id, limit=msg_count):  # Асинхронная итерация
                     messages.append(msg)
 
                     # Формируем ASCII прогресс-бар
@@ -350,7 +351,9 @@ async def echo(update: Update, context: CallbackContext) -> None:
 
             await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
-# AI Summary
+
+
+# Новая функция для обработки AI Summary
 async def process_ai_summary(update: Update, processing_message) -> None:
     result = "🤖 AI Summary:\n"
 
@@ -368,6 +371,9 @@ async def process_ai_summary(update: Update, processing_message) -> None:
     # Редактируем сообщение после завершения обработки
     await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
+
+
+
 # Логирование всех сообщений
 async def log_message(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
@@ -379,28 +385,24 @@ def log_to_console(update: Update) -> None:
 
     # Выводим в консоль
     print(f"\n🗨️ [{current_time} @{username}]\n{message_text}")
-    if update.message.from_user.id != admin_id:
+    if update.message.from_user.username != admin_username:
         print(f"⚠️ Message from an unknown user. Ignored.")
-
-# # Сообщение о запуске скрипта
-# async def send_startup_message():
-#     await TGuserbot_app.send_message(admin_id, "🚀 Script updated and started!")
 
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
     print("🚀 Script started!")
-    TGbot_app = Application.builder().token(TGbot_token).build()
+    application = Application.builder().token(TGbot_token).build()
 
     # Регистрируем обработчики
-    TGbot_app.add_handler(CommandHandler("start", start))
-    TGbot_app.add_handler(CommandHandler("ping", ping))
-    TGbot_app.add_handler(CommandHandler("list", list_chats))
-    TGbot_app.add_handler(CommandHandler("ai", ai_query))
-    TGbot_app.add_handler(CommandHandler("ai_clean", ai_clean))
-    TGbot_app.add_handler(CommandHandler("id", reply_id))
-    TGbot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
-    TGbot_app.add_handler(MessageHandler(filters.ALL, log_message))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("ping", ping))
+    application.add_handler(CommandHandler("list", list_chats))
+    application.add_handler(CommandHandler("ai", ai_query))
+    application.add_handler(CommandHandler("ai_clean", ai_clean))
+    application.add_handler(CommandHandler("id", reply_id))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    application.add_handler(MessageHandler(filters.ALL, log_message))
     
     ''' Для телеграм бота команды:
     list - <n> show recent chats (default: 5 chats)
@@ -411,22 +413,16 @@ def main() -> None:
     ai_clean -  test. Clear the AI dialogue history
     '''
 
+
     # Запускаем клиента Pyrogram
-    TGuserbot_app.start()  # Открываем соединение с Pyrogram
-
-    # asyncio.run(send_startup_message())
-
+    app.start()  # Открываем соединение с Pyrogram
 
     try:
         # Запускаем бота
-        TGbot_app.run_polling()
-
-        
-
+        application.run_polling()
     finally:
         # Закрываем клиента Pyrogram при завершении работы
-        TGuserbot_app.stop()
+        app.stop()
 
 if __name__ == '__main__':
     main()
-
