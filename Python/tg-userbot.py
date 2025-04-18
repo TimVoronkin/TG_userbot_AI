@@ -1,6 +1,7 @@
 from pyrogram import Client  # type: ignore
 from pyrogram.errors import PeerIdInvalid  # type: ignore
 from pyrogram.enums import ChatType  # Импортируем перечисление типов чатов
+import telegram
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from datetime import datetime
@@ -389,14 +390,20 @@ def log_to_console(update: Update) -> None:
     if update.message.from_user.username != admin_username:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
-# Отправляем сообщение о запуске скрипта через бота
-async def send_startup_message():
-    await app.send_message(admin_username, "🚀 Script updated and started!")
+
+# Добавьте функцию send_message
+async def send_message():
+    bot = telegram.Bot(token=TGbot_token)
+    try:
+        await bot.send_message(chat_id=admin_id, text="🚀 Привет, это сообщение от бота!")
+        print("Сообщение успешно отправлено!")
+    except Exception as e:
+        print(f"Ошибка при отправке сообщения: {e}")
 
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
-    print("🚀 Script started!")
+    print("🚀 Main script started!")
     application = Application.builder().token(TGbot_token).build()
 
     # Регистрируем обработчики
@@ -418,12 +425,8 @@ def main() -> None:
     ai_clean -  test. Clear the AI dialogue history
     '''
 
-
     # Запускаем клиента Pyrogram
     app.start()  # Открываем соединение с Pyrogram
-
-    # Отправляем сообщение о запуске скрипта через бота
-    asyncio.create_task(send_startup_message())  # Use create_task instead of asyncio.run()
 
     try:
         # Запускаем бота
@@ -433,4 +436,7 @@ def main() -> None:
         app.stop()
 
 if __name__ == '__main__':
-    main()
+    print("🚀 Script started!")
+    import asyncio
+    asyncio.run(send_message())  # Вызов функции отправки сообщения
+    main()  # Запуск основного бота
