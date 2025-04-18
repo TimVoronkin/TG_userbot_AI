@@ -423,7 +423,7 @@ def main() -> None:
     app.start()  # Открываем соединение с Pyrogram
 
     # Отправляем сообщение о запуске скрипта через бота
-    asyncio.run(send_startup_message())
+    asyncio.create_task(send_startup_message())  # Use create_task instead of asyncio.run()
 
     try:
         # Запускаем бота
