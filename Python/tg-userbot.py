@@ -10,6 +10,8 @@ import markdown # type: ignore
 import bleach # type: ignore
 allowed_tags = ['b', 'i', 'u', 'code', 'pre', 'a', 'blockquote']
 from google import genai  # библиотека для работы с Geminy
+
+admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key = None, None, None, None, None, None
 # Импортируем конфигурацию из файла config.py
 from config import admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
 if not all([admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
