@@ -13,11 +13,12 @@ from google import genai  # Импортируем библиотеку для �
 # from config import admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key  # Импортируем конфиденциальные данные
 import os
 admin_username = os.getenv("admin_username")
+admin_id = os.getenv("admin_id")
 TG_api_id = os.getenv("TG_api_id")
 TG_api_hash = os.getenv("TG_api_hash")
 TGbot_token = os.getenv("TGbot_token")
 AI_api_key = os.getenv("AI_api_key")
-if not all([admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
+if not all([admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more environment variables are missing!")
 
 
@@ -391,7 +392,7 @@ def log_to_console(update: Update) -> None:
 # Асинхронная функция для отправки сообщения через бота
 async def send_startup_message_via_bot(application: Application):
     async with application:
-        await application.bot.send_message(chat_id=admin_username, text="🚀 Script updated and started!")
+        await application.bot.send_message(chat_id=admin_id, text="🚀 Script updated and started!")
 
 
 # Основная функция для запуска Telegram-бота
