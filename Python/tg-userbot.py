@@ -382,9 +382,9 @@ def log_to_console(update: Update) -> None:
     if update.message.from_user.id != admin_id:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
-# Сообщение о запуске скрипта
-async def send_startup_message():
-    await TGuserbot_app.send_message(admin_id, "🚀 Script updated and started!")
+# # Сообщение о запуске скрипта
+# async def send_startup_message():
+#     await TGuserbot_app.send_message(admin_id, "🚀 Script updated and started!")
 
 
 # Основная функция для запуска Telegram-бота
@@ -414,7 +414,7 @@ def main() -> None:
     # Запускаем клиента Pyrogram
     TGuserbot_app.start()  # Открываем соединение с Pyrogram
 
-    asyncio.run(send_startup_message())
+    # asyncio.run(send_startup_message())
 
 
     try:
