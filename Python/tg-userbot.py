@@ -12,13 +12,13 @@ from google import genai  # Импортируем библиотеку для �
 
 # from config import admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key  # Импортируем конфиденциальные данные
 import os
-admin_username = os.getenv("admin_username")
+# admin_username = os.getenv("admin_username")
 admin_id = os.getenv("admin_id")
 TG_api_id = os.getenv("TG_api_id")
 TG_api_hash = os.getenv("TG_api_hash")
 TGbot_token = os.getenv("TGbot_token")
 AI_api_key = os.getenv("AI_api_key")
-if not all([admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
+if not all([admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more environment variables are missing!")
 
 # Инициализация клиента Geminy
@@ -26,7 +26,6 @@ AI_client = genai.Client(api_key=AI_api_key)
 AI_prompt = "Очень коротко выдели главные темы, идеи, люди итд в этой переписке. Напиши пукнтами, без форматирования"
 
 lines_crop = 10 * 3  # Количество строк для отображения в сокращённой версии истории чата. 3 потому что обычно 3 строки на сообщение
-
 delay_TG = 0.5  # Задержка между запросами для предотвращения превышения лимита API
 
 # Инициализация клиента Pyrogram
@@ -44,7 +43,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 # команда /ping
 async def ping(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
 
         results = []
         processing_message = await update.message.reply_text("\n".join(results) + "⏳ Running diagnostics...")
@@ -76,7 +75,7 @@ async def ping(update: Update, context: CallbackContext) -> None:
 # команда /list
 async def list_chats(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
         try:
             limit = int(context.args[0]) if context.args else 5
             if limit <= 0:
@@ -130,7 +129,7 @@ async def ai_query(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
     user_id = update.message.from_user.id  # Уникальный идентификатор пользователя
 
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
         # Проверяем, есть ли запрос после команды
         if context.args:
             query = " ".join(context.args)  # Объединяем аргументы в строку
@@ -186,7 +185,7 @@ async def ai_clean(update: Update, context: CallbackContext) -> None:
 # команда /id
 async def reply_id(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
 
         if update.message.reply_to_message:
             replied_message_id = update.message.reply_to_message.message_id
@@ -198,7 +197,7 @@ async def reply_id(update: Update, context: CallbackContext) -> None:
 async def echo(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
     # Проверка, что сообщение отправлено мной
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
 
         # ОТВЕТНОЕ СООБЩЕНИЕ
         if update.message.reply_to_message:
@@ -380,7 +379,7 @@ def log_to_console(update: Update) -> None:
 
     # Выводим в консоль
     print(f"\n🗨️ [{current_time} @{username}]\n{message_text}")
-    if update.message.from_user.username != admin_username:
+    if update.message.from_user.id != admin_id:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
 # Сообщение о запуске скрипта
