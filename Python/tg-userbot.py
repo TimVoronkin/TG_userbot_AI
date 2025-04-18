@@ -395,15 +395,14 @@ def log_to_console(update: Update) -> None:
 async def send_message():
     bot = telegram.Bot(token=TGbot_token)
     try:
-        await bot.send_message(chat_id=admin_id, text="🚀 Привет, это сообщение от бота!")
-        print("Сообщение успешно отправлено!")
+        await bot.send_message(chat_id=admin_id, text="🚀 Script updated and started!")
+        print("Initial message sent to admin.")
     except Exception as e:
-        print(f"Ошибка при отправке сообщения: {e}")
+        print(f"Error sending message to {admin_id}: {e}")
 
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
-    print("🚀 Main script started!")
     application = Application.builder().token(TGbot_token).build()
 
     # Регистрируем обработчики
