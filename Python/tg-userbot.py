@@ -13,18 +13,17 @@ from google import genai  # библиотека для работы с Geminy
 
 # Импортируем конфигурацию
 # ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА
-# from config import admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
+from config import admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
 
 # ДЛЯ ЗАПУСКА В HEROKU
-import os
-admin_username = os.getenv("admin_username")
-admin_id = os.getenv("admin_id")
-TG_api_id = os.getenv("TG_api_id")
-TG_api_hash = os.getenv("TG_api_hash")
-TGbot_token = os.getenv("TGbot_token")
-AI_api_key = os.getenv("AI_api_key")
+# import os
+# admin_id = os.getenv("admin_id")
+# TG_api_id = os.getenv("TG_api_id")
+# TG_api_hash = os.getenv("TG_api_hash")
+# TGbot_token = os.getenv("TGbot_token")
+# AI_api_key = os.getenv("AI_api_key")
 
-if not all([admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
+if not all([admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more configuration variables are missing!")
 
 # Инициализация клиента Geminy
@@ -50,7 +49,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 # команда /ping
 async def ping(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
 
         results = []
         processing_message = await update.message.reply_text("\n".join(results) + "⏳ Running diagnostics...")
@@ -82,7 +81,7 @@ async def ping(update: Update, context: CallbackContext) -> None:
 # команда /list
 async def list_chats(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
         try:
             limit = int(context.args[0]) if context.args else 5
             if limit <= 0:
@@ -136,7 +135,7 @@ async def ai_query(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
     user_id = update.message.from_user.id  # Уникальный идентификатор пользователя
 
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
         # Проверяем, есть ли запрос после команды
         if context.args:
             query = " ".join(context.args)  # Объединяем аргументы в строку
@@ -192,7 +191,7 @@ async def ai_clean(update: Update, context: CallbackContext) -> None:
 # команда /id
 async def reply_id(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
 
         if update.message.reply_to_message:
             replied_message_id = update.message.reply_to_message.message_id
@@ -205,7 +204,7 @@ async def reply_id(update: Update, context: CallbackContext) -> None:
 async def echo(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
     # Проверка, что сообщение отправлено мной
-    if update.message.from_user.username == admin_username:
+    if update.message.from_user.id == admin_id:
         global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
 
         # ОТВЕТНОЕ СООБЩЕНИЕ
@@ -354,29 +353,6 @@ async def echo(update: Update, context: CallbackContext) -> None:
 
 
 
-
-
-#AI Summary
-# async def process_ai_summary(update: Update) -> None:
-#     global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
-#     result = "🤖 AI Summary:\n"
-#     processing_message = await update.message.reply_text(f"{result}\nLoading...", parse_mode="HTML")
-
-#     # Отправляем запрос в Geminy
-#     try:
-#         ai_response = AI_client.models.generate_content(
-#             model="gemini-2.0-flash",
-#             contents=f"{AI_default_prompt}\n\n{my_chat_histoty}",
-#         )
-#         response = ai_response if isinstance(ai_response, str) else ai_response.text
-#         result += f"<blockquote>{bleach.clean(markdown.markdown(response), tags=allowed_tags, strip=True)}</blockquote>"
-#     except Exception as e:
-#         result += f"⚠️ Error: {e}"
-    
-#     # Редактируем сообщение после завершения обработки
-#     await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
-
-
 # AI ответ на сообщение
 async def AI_answer(update: Update, context: CallbackContext, AI_question) -> None:
     global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
@@ -401,7 +377,6 @@ async def AI_answer(update: Update, context: CallbackContext, AI_question) -> No
     await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
 
-
 # Логирование всех сообщений
 async def log_message(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
@@ -413,7 +388,7 @@ def log_to_console(update: Update) -> None:
 
     # Выводим в консоль
     print(f"\n🗨️ [{current_time} @{username}]\n{message_text}")
-    if update.message.from_user.username != admin_username:
+    if update.message.from_user.id != admin_id:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
 
