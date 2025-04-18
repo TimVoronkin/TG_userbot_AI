@@ -251,28 +251,27 @@ async def echo(update: Update, context: CallbackContext) -> None:
 
                 # Получаем последние сообщения из чата
                 messages = []
-                start_time = datetime.now()  # Запоминаем время начала загрузки
                 async for msg in app.get_chat_history(chat_id, limit=msg_count):  # Асинхронная итерация
                     messages.append(msg)
 
                     # Формируем ASCII прогресс-бар
                     progress_bar_length = 30  # Длина прогресс-бара
                     progress = int((len(messages) / msg_count) * progress_bar_length)  # 20 символов в прогресс-баре
-                    progress_bar = f"{'█' * progress}{'░' * (progress_bar_length - progress)}"
-
-                    # Оцениваем оставшееся время
-                    elapsed_time = (datetime.now() - start_time).total_seconds()
-                    estimated_total_time = (elapsed_time / len(messages)) * msg_count if len(messages) > 0 else 0
-                    remaining_time = max(0, estimated_total_time - elapsed_time)
-                    remaining_time_str = f"{int(remaining_time // 60)}m {int(remaining_time % 60)}s" if remaining_time >= 60 else f"{int(remaining_time)}s"
+                    progress_bar = f"{'█' * progress}{'░' * (progress_bar_length - progress)}" 
+                    
+                    remaining_sec = round((msg_count - len(messages)) * delay_TG, 1)  # Оставшееся время в секундах
+                    remaining_time_str = f"{remaining_sec} sec"  # Форматируем оставшееся время
+                    if remaining_sec >= 60:
+                        remaining_time_str = f"{remaining_sec // 60} min {remaining_sec % 60} sec"
+                    
 
                     # Обновляем сообщение с прогрессом
                     await processing_message.edit_text(
                         result + f"\n⏳ Loading... {len(messages)}/{msg_count} apx {remaining_time_str} left\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%",
                         parse_mode="HTML"
                     )
-
                     await asyncio.sleep(delay_TG)  # Задержка между запросами для предотвращения превышения лимита API
+
                 if messages:
                     my_chat_histoty = ""  # Переменная для хранения истории чата
                     for msg in reversed(messages):  # Переворачиваем список для вывода в порядке от старых к новым
