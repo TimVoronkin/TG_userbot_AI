@@ -21,12 +21,13 @@ if not all([admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more environment variables are missing!")
 
 
-
 # Инициализация клиента Geminy
 AI_client = genai.Client(api_key=AI_api_key)
 AI_prompt = "Очень коротко выдели главные темы, идеи, люди итд в этой переписке. Напиши пукнтами, без форматирования"
 
 lines_crop = 10 * 3  # Количество строк для отображения в сокращённой версии истории чата. 3 потому что обычно 3 строки на сообщение
+
+delay_TG = 0.5  # Задержка между запросами для предотвращения превышения лимита API
 
 # Инициализация клиента Pyrogram
 app = Client("my_userbot", api_id=TG_api_id, api_hash=TG_api_hash)
@@ -250,19 +251,28 @@ async def echo(update: Update, context: CallbackContext) -> None:
 
                 # Получаем последние сообщения из чата
                 messages = []
+                start_time = datetime.now()  # Запоминаем время начала загрузки
                 async for msg in app.get_chat_history(chat_id, limit=msg_count):  # Асинхронная итерация
                     messages.append(msg)
 
                     # Формируем ASCII прогресс-бар
                     progress_bar_length = 30  # Длина прогресс-бара
                     progress = int((len(messages) / msg_count) * progress_bar_length)  # 20 символов в прогресс-баре
-                    progress_bar = f"{'█' * progress}{'░' * (progress_bar_length - progress)}" 
+                    progress_bar = f"{'█' * progress}{'░' * (progress_bar_length - progress)}"
+
+                    # Оцениваем оставшееся время
+                    elapsed_time = (datetime.now() - start_time).total_seconds()
+                    estimated_total_time = (elapsed_time / len(messages)) * msg_count if len(messages) > 0 else 0
+                    remaining_time = max(0, estimated_total_time - elapsed_time)
+                    remaining_time_str = f"{int(remaining_time // 60)}m {int(remaining_time % 60)}s" if remaining_time >= 60 else f"{int(remaining_time)}s"
 
                     # Обновляем сообщение с прогрессом
-                    await processing_message.edit_text(result + f"\n⏳ Loading... {len(messages)}/{msg_count}\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%", parse_mode="HTML")
+                    await processing_message.edit_text(
+                        result + f"\n⏳ Loading... {len(messages)}/{msg_count} apx {remaining_time_str} left\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%",
+                        parse_mode="HTML"
+                    )
 
-                    await asyncio.sleep(0.5)  # Задержка между запросами для предотвращения превышения лимита API
-
+                    await asyncio.sleep(delay_TG)  # Задержка между запросами для предотвращения превышения лимита API
                 if messages:
                     my_chat_histoty = ""  # Переменная для хранения истории чата
                     for msg in reversed(messages):  # Переворачиваем список для вывода в порядке от старых к новым
