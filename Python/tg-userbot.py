@@ -384,9 +384,13 @@ def log_to_console(update: Update) -> None:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
 
-async def send_startup_message(application: Application):
-    async with application:
-        await application.bot.send_message(chat_id=admin_username, text="🚀 Script updated and started!")
+
+
+async def send_startup_message(update: Update, context: CallbackContext) -> None:
+    log_to_console(update)
+    await update.message.reply_text('🚀 Script updated and started!')
+
+
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
@@ -419,8 +423,7 @@ def main() -> None:
     try:
         # Запускаем бота
         application.run_polling()
-        # Отправляем сообщение о запуске скрипта
-        asyncio.run(send_startup_message(application))
+        send_startup_message(None, None)  # Отправляем сообщение о запуске скрипта
 
 
     finally:
