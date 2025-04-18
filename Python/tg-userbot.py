@@ -30,7 +30,7 @@ lines_crop = 10 * 3  # Количество строк для отображен
 delay_TG = 0.5  # Задержка между запросами для предотвращения превышения лимита API
 
 # Инициализация клиента Pyrogram
-app = Client("my_userbot", api_id=TG_api_id, api_hash=TG_api_hash)
+TGuserbot_app = Client("my_userbot", api_id=TG_api_id, api_hash=TG_api_hash)
 
 # Хранилище истории диалогов
 dialog_history = {}
@@ -58,7 +58,7 @@ async def ping(update: Update, context: CallbackContext) -> None:
 
         # Check Pyrogram userbot connectivity
         try:
-            await app.get_me()  # Убрано использование async with
+            await TGuserbot_app.get_me()  # Убрано использование async with
             results.append("✅ Pyrogram userbot is working correctly.")
         except Exception as e:
             results.append(f"❌ Pyrogram userbot error: {e}")
@@ -87,7 +87,7 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
         try:
             # Получаем последние чаты
             dialogs = []
-            async for dialog in app.get_dialogs(limit=limit):  # Убрано использование async with
+            async for dialog in TGuserbot_app.get_dialogs(limit=limit):  # Убрано использование async with
 
                 display_name = dialog.chat.title if dialog.chat.title else (dialog.chat.first_name or '') + ' ' + (dialog.chat.last_name or '')
 
@@ -245,13 +245,13 @@ async def echo(update: Update, context: CallbackContext) -> None:
             # Основная логика Pyrogram
             try:
                 # Получаем информацию о чате
-                chat = await app.get_chat(chat_id)  # Убрано использование async with
+                chat = await TGuserbot_app.get_chat(chat_id)  # Убрано использование async with
                 result = f"💬 ''{chat.title or chat.first_name}''\n🆔 <code>{chat_id}</code>\n#️⃣ last {msg_count} messages:\n"
                 await processing_message.edit_text(result + '\n⏳ Loading...', parse_mode="HTML")
 
                 # Получаем последние сообщения из чата
                 messages = []
-                async for msg in app.get_chat_history(chat_id, limit=msg_count):  # Асинхронная итерация
+                async for msg in TGuserbot_app.get_chat_history(chat_id, limit=msg_count):  # Асинхронная итерация
                     messages.append(msg)
 
                     # Формируем ASCII прогресс-бар
@@ -351,7 +351,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
 
             await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
-# Новая функция для обработки AI Summary
+# AI Summary
 async def process_ai_summary(update: Update, processing_message) -> None:
     result = "🤖 AI Summary:\n"
 
@@ -383,23 +383,29 @@ def log_to_console(update: Update) -> None:
     if update.message.from_user.username != admin_username:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
+async def notify_admin_on_startup(application: Application) -> None:
+    try:
+        await application.bot.send_message(chat_id=f"@{admin_username}", text="🚀 Script updated and started!")
+        print("✅ Notification sent to admin.")
+    except Exception as e:
+        print(f"⚠️ Failed to send notification to admin: {e}")
 
 
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
     print("🚀 Script started!")
-    application = Application.builder().token(TGbot_token).build()
+    TGbot_app = Application.builder().token(TGbot_token).build()
 
     # Регистрируем обработчики
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("ping", ping))
-    application.add_handler(CommandHandler("list", list_chats))
-    application.add_handler(CommandHandler("ai", ai_query))
-    application.add_handler(CommandHandler("ai_clean", ai_clean))
-    application.add_handler(CommandHandler("id", reply_id))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
-    application.add_handler(MessageHandler(filters.ALL, log_message))
+    TGbot_app.add_handler(CommandHandler("start", start))
+    TGbot_app.add_handler(CommandHandler("ping", ping))
+    TGbot_app.add_handler(CommandHandler("list", list_chats))
+    TGbot_app.add_handler(CommandHandler("ai", ai_query))
+    TGbot_app.add_handler(CommandHandler("ai_clean", ai_clean))
+    TGbot_app.add_handler(CommandHandler("id", reply_id))
+    TGbot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    TGbot_app.add_handler(MessageHandler(filters.ALL, log_message))
     
     ''' Для телеграм бота команды:
     list - <n> show recent chats (default: 5 chats)
@@ -412,16 +418,20 @@ def main() -> None:
 
 
     # Запускаем клиента Pyrogram
-    app.start()  # Открываем соединение с Pyrogram
+    TGuserbot_app.start()  # Открываем соединение с Pyrogram
 
     try:
+
+        TGbot_app.loop.run_until_complete(notify_admin_on_startup(TGbot_app))
+
         # Запускаем бота
-        application.run_polling()
+        TGbot_app.run_polling()
+        
 
 
     finally:
         # Закрываем клиента Pyrogram при завершении работы
-        app.stop()
+        TGuserbot_app.stop()
 
 if __name__ == '__main__':
     main()
