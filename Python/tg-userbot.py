@@ -422,7 +422,7 @@ def main() -> None:
 
     try:
 
-        TGbot_app.run_async(notify_admin_on_startup)  # Отправляем уведомление администратору о запуске бота
+        TGbot_app.create_task(notify_admin_on_startup(TGbot_app))
 
         # Запускаем бота
         TGbot_app.run_polling()
