@@ -351,8 +351,6 @@ async def echo(update: Update, context: CallbackContext) -> None:
 
             await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
-
-
 # Новая функция для обработки AI Summary
 async def process_ai_summary(update: Update, processing_message) -> None:
     result = "🤖 AI Summary:\n"
@@ -371,9 +369,6 @@ async def process_ai_summary(update: Update, processing_message) -> None:
     # Редактируем сообщение после завершения обработки
     await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
-
-
-
 # Логирование всех сообщений
 async def log_message(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
@@ -388,6 +383,10 @@ def log_to_console(update: Update) -> None:
     if update.message.from_user.username != admin_username:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
+
+async def send_startup_message(application: Application):
+    async with application:
+        await application.bot.send_message(chat_id=admin_username, text="🚀 Script updated and started!")
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
@@ -417,13 +416,12 @@ def main() -> None:
     # Запускаем клиента Pyrogram
     app.start()  # Открываем соединение с Pyrogram
 
-    # Отправляем сообщение о запуске скрипта
-    asyncio.run(app.send_message(admin_username, "🚀 Script updated and started!"))
-
-
     try:
         # Запускаем бота
         application.run_polling()
+        # Отправляем сообщение о запуске скрипта
+        asyncio.run(send_startup_message(application))
+
 
     finally:
         # Закрываем клиента Pyrogram при завершении работы
