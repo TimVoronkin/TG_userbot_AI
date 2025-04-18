@@ -391,18 +391,17 @@ def log_to_console(update: Update) -> None:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
 
-# Добавьте функцию send_message
-async def send_message():
+# Основная функция для запуска Telegram-бота
+async def main() -> None:
+    # Отправляем начальное сообщение
     bot = telegram.Bot(token=TGbot_token)
     try:
         await bot.send_message(chat_id=admin_id, text="🚀 Script updated and started!")
-        print("Initial message sent to admin.")
+        print(f"Initial message sent to admin ({admin_id}).")
     except Exception as e:
         print(f"Error sending message to {admin_id}: {e}")
 
-
-# Основная функция для запуска Telegram-бота
-def main() -> None:
+    # Инициализируем приложение
     application = Application.builder().token(TGbot_token).build()
 
     # Регистрируем обработчики
@@ -429,7 +428,7 @@ def main() -> None:
 
     try:
         # Запускаем бота
-        application.run_polling()
+        await application.run_polling()
     finally:
         # Закрываем клиента Pyrogram при завершении работы
         app.stop()
@@ -437,5 +436,4 @@ def main() -> None:
 if __name__ == '__main__':
     print("🚀 Script started!")
     import asyncio
-    asyncio.run(send_message())  # Вызов функции отправки сообщения
-    main()  # Запуск основного бота
+    asyncio.run(main())  # Запуск основного бота
