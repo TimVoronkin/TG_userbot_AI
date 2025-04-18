@@ -13,13 +13,13 @@ from google import genai  # Импортируем библиотеку для �
 # from config import admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key  # Импортируем конфиденциальные данные
 import os
 admin_username = os.getenv("admin_username")
+admin_id = os.getenv("admin_id")
 TG_api_id = os.getenv("TG_api_id")
 TG_api_hash = os.getenv("TG_api_hash")
 TGbot_token = os.getenv("TGbot_token")
 AI_api_key = os.getenv("AI_api_key")
-if not all([admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
+if not all([admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more environment variables are missing!")
-
 
 # Инициализация клиента Geminy
 AI_client = genai.Client(api_key=AI_api_key)
@@ -383,15 +383,13 @@ def log_to_console(update: Update) -> None:
     if update.message.from_user.username != admin_username:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
-
+# Сообщение о запуске скрипта
 async def send_initial_message(app: Application) -> None:
-    # Замените на реальный user_id пользователя @Tim_Voronkin
-    USER_ID = 565432599  # Вставьте реальный ID
     try:
-        await app.bot.send_message(chat_id=USER_ID, text="Бот запущен! Это автоматическое сообщение для @Tim_Voronkin.")
-        print(f"Сообщение успешно отправлено пользователю с ID {USER_ID}")
+        await app.bot.send_message(chat_id=admin_id, text="🚀 Script updated and started!")
+        print(f"Bot sent message to {admin_id} successfully.")
     except Exception as e:
-        print(f"Ошибка при отправке сообщения пользователю с ID {USER_ID}: {e}")
+        print(f"Error sending message to {admin_id}: {e}")
 
 
 # Основная функция для запуска Telegram-бота
