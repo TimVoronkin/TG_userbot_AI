@@ -386,7 +386,7 @@ def log_to_console(update: Update) -> None:
 
 async def send_initial_message(app: Application) -> None:
     # Замените на реальный user_id пользователя @Tim_Voronkin
-    USER_ID = 123456789  # Вставьте реальный ID
+    USER_ID = 565432599  # Вставьте реальный ID
     try:
         await app.bot.send_message(chat_id=USER_ID, text="Бот запущен! Это автоматическое сообщение для @Tim_Voronkin.")
         print(f"Сообщение успешно отправлено пользователю с ID {USER_ID}")
