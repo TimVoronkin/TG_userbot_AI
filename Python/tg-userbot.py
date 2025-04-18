@@ -9,19 +9,11 @@ import asyncio
 import markdown # type: ignore
 import bleach # type: ignore
 allowed_tags = ['b', 'i', 'u', 'code', 'pre', 'a', 'blockquote']
-from google import genai  # Импортируем библиотеку для работы с Geminy
-
-# from config import admin_username, TG_api_id, TG_api_hash, TGbot_token, AI_api_key  # Импортируем конфиденциальные данные
-import os
-admin_username = os.getenv("admin_username")
-admin_id = os.getenv("admin_id")
-TG_api_id = os.getenv("TG_api_id")
-TG_api_hash = os.getenv("TG_api_hash")
-TGbot_token = os.getenv("TGbot_token")
-AI_api_key = os.getenv("AI_api_key")
+from google import genai  # библиотека для работы с Geminy
+# Импортируем конфигурацию из файла config.py
+from config import admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
 if not all([admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
-    raise ValueError("One or more environment variables are missing!")
-
+    raise ValueError("One or more configuration variables are missing!")
 
 # Инициализация клиента Geminy
 AI_client = genai.Client(api_key=AI_api_key)
@@ -391,15 +383,19 @@ def log_to_console(update: Update) -> None:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
 
-# Основная функция для запуска Telegram-бота
-async def main() -> None:
-    # Отправляем начальное сообщение
+# Отправляем начальное сообщение
+async def send_message():
     bot = telegram.Bot(token=TGbot_token)
     try:
-        await bot.send_message(chat_id=admin_id, text="🚀 Script updated and started!")
-        print(f"Initial message sent to admin ({admin_id}).")
+        await bot.send_message(chat_id=admin_id, text="🚀 NEW Script updated and started!")
+        print("💬 initial message sent to admin.")
     except Exception as e:
-        print(f"Error sending message to {admin_id}: {e}")
+        print(f"⚠️ Error sending message to admin (): {e}")
+
+
+# Основная функция для запуска Telegram-бота
+async def main() -> None:
+
 
     # Инициализируем приложение
     application = Application.builder().token(TGbot_token).build()
@@ -436,4 +432,6 @@ async def main() -> None:
 if __name__ == '__main__':
     print("🚀 Script started!")
     import asyncio
-    asyncio.run(main())  # Запуск основного бота
+    asyncio.run(send_message())  # Вызов функции отправки сообщения
+
+    main()  # Запуск основного бота
