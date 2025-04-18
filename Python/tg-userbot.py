@@ -386,9 +386,9 @@ def log_to_console(update: Update) -> None:
 async def send_initial_message(app: Application) -> None:
     try:
         await app.bot.send_message(chat_id=admin_id, text="🚀 Script updated and started!")
-        print(f"Bot sent message to {admin_id} successfully.")
+        print(f"💬 Bot sent message to {admin_id} successfully.")
     except Exception as e:
-        print(f"Error sending message to {admin_id}: {e}")
+        print(f"⚠️ Error sending message to {admin_id}: {e}")
 
 
 # Основная функция для запуска Telegram-бота
@@ -419,10 +419,10 @@ def main() -> None:
     TGuserbot_app.start()  # Открываем соединение с Pyrogram
 
     try:
-
-        asyncio.run(send_initial_message(TGbot_app))
         # Запускаем бота
         TGbot_app.run_polling()
+        asyncio.run(send_initial_message(TGbot_app))
+
         
 
     finally:
@@ -431,3 +431,4 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
+
