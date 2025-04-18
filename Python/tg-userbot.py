@@ -384,14 +384,14 @@ def log_to_console(update: Update) -> None:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
 
-
-async def notify_admin_on_startup(application: Application) -> None:
+async def send_initial_message(app: Application) -> None:
+    # Замените на реальный user_id пользователя @Tim_Voronkin
+    USER_ID = 123456789  # Вставьте реальный ID
     try:
-        await application.bot.send_message(chat_id=f"@{admin_username}", text="🚀 Script updated and started!")
-        print("✅ Notification sent to admin.")
+        await app.bot.send_message(chat_id=USER_ID, text="Бот запущен! Это автоматическое сообщение для @Tim_Voronkin.")
+        print(f"Сообщение успешно отправлено пользователю с ID {USER_ID}")
     except Exception as e:
-        print(f"⚠️ Failed to send notification to admin: {e}")
-
+        print(f"Ошибка при отправке сообщения пользователю с ID {USER_ID}: {e}")
 
 
 # Основная функция для запуска Telegram-бота
@@ -418,18 +418,14 @@ def main() -> None:
     ai_clean -  test. Clear the AI dialogue history
     '''
 
-
     # Запускаем клиента Pyrogram
     TGuserbot_app.start()  # Открываем соединение с Pyrogram
 
-
-    async def startup_tasks():
-        await notify_admin_on_startup(TGbot_app)
-
-
     try:
+
+        TGbot_app.run_async(send_initial_message(TGbot_app))
         # Запускаем бота
-        TGbot_app.run_polling(poll_interval=0.5, on_startup=startup_tasks)
+        TGbot_app.run_polling()
         
 
     finally:
