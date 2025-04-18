@@ -418,23 +418,19 @@ def main() -> None:
     ai_clean -  test. Clear the AI dialogue history
     '''
 
-    # Функция для отправки уведомления после инициализации
-    async def on_startup(application: Application) -> None:
-        await notify_admin_on_startup(application)
 
-    TGbot_app.post_init(on_startup)
-
-    
     # Запускаем клиента Pyrogram
     TGuserbot_app.start()  # Открываем соединение с Pyrogram
 
+
+    async def startup_tasks():
+        await notify_admin_on_startup(TGbot_app)
+
+
     try:
-
-
         # Запускаем бота
-        TGbot_app.run_polling()
+        TGbot_app.run_polling(poll_interval=0.5, on_startup=startup_tasks)
         
-
 
     finally:
         # Закрываем клиента Pyrogram при завершении работы
