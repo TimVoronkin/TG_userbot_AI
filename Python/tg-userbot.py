@@ -11,9 +11,17 @@ import bleach # type: ignore
 allowed_tags = ['b', 'i', 'u', 'code', 'pre', 'a', 'blockquote']
 from google import genai  # библиотека для работы с Geminy
 
-admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key = None, None, None, None, None, None
-# Импортируем конфигурацию из файла config.py
-from config import admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
+# Импортируем конфигурацию
+
+# from config import admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
+import os
+admin_username = os.getenv("admin_username")
+admin_id = os.getenv("admin_id")
+TG_api_id = os.getenv("TG_api_id")
+TG_api_hash = os.getenv("TG_api_hash")
+TGbot_token = os.getenv("TGbot_token")
+AI_api_key = os.getenv("AI_api_key")
+
 if not all([admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more configuration variables are missing!")
 
@@ -435,5 +443,4 @@ if __name__ == '__main__':
     print("🚀 Script started!")
     import asyncio
     asyncio.run(send_message())  # Вызов функции отправки сообщения
-
     main()  # Запуск основного бота
