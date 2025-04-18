@@ -29,7 +29,7 @@ if not all([admin_username, admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_ap
 
 # Инициализация клиента Geminy
 AI_client = genai.Client(api_key=AI_api_key)
-AI_prompt = "Очень коротко выдели главные темы, идеи, люди итд в этой переписке. Напиши пукнтами, без форматирования"
+AI_default_prompt = "Очень коротко выдели главные темы, идеи, люди итд в этой переписке. Напиши пукнтами, без форматирования"
 
 lines_crop = 10 * 3  # Количество строк для отображения в сокращённой версии истории чата. 3 потому что обычно 3 строки на сообщение
 
@@ -200,40 +200,23 @@ async def reply_id(update: Update, context: CallbackContext) -> None:
         else:
             await update.message.reply_text("⚠️ Please reply to a message to use this command.")
 
+
 # Основные сообщения
 async def echo(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
     # Проверка, что сообщение отправлено мной
     if update.message.from_user.username == admin_username:
+        global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
 
         # ОТВЕТНОЕ СООБЩЕНИЕ
         if update.message.reply_to_message:
-            global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
+            await AI_answer(update, context, AI_question=update.message.text)  # Вызов функции AI_answer для обработки ответа на сообщение
 
-            AI_prompt_in_message = update.message.text
-            print("AI_prompt_in_message:\n"+AI_prompt_in_message)
-            result = "🤖 AI Summary:\n"
-            processing_message = await update.message.reply_text(result+"⏳ Loading...", parse_mode="HTML") #, reply_to_message_id=update.message.message_id
-
-            # Отправляем запрос в Geminy
-            try:
-                ai_response = AI_client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=f"{AI_prompt_in_message}\n\n{my_chat_histoty}",
-                )
-                response = ai_response if isinstance(ai_response, str) else ai_response.text
-                result += f"<blockquote>{bleach.clean(markdown.markdown(response), tags=allowed_tags, strip=True)}</blockquote>"
-            except Exception as e:
-                result += f"⚠️ Error: {e}"
-            
-            # Редактируем сообщение после завершения обработки
-            await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
         
-        # ЗАПРОС
+        # СООБЩЕНИЕ ЗАПРОС
         else:
-
-            # Отправляем сообщение 1
+            # Отправляем сообщение
             processing_message = await update.message.reply_text("⏳ Loading...")
 
             # Читаем сообщение пользователя
@@ -241,11 +224,18 @@ async def echo(update: Update, context: CallbackContext) -> None:
                 lines = update.message.text.split("\n")
                 chat_id = lines[0].strip()
                 try:
-                    msg_count = int(lines[1].strip())
+                    msg_count = int(lines[1].strip()) # Читаем содержимое второй строки
                 except (IndexError, ValueError):
                     msg_count = 10  # Если второй строки нет или она некорректна, используем значение по умолчанию
+
+                try:
+                    AI_question = lines[2].strip()  # Читаем содержимое третьей строки
+                except IndexError:
+                    AI_question = AI_default_prompt  # Если третьей строки нет, устанавливаем значение по умолчанию
+
+
             except (IndexError, ValueError):
-                await processing_message.edit_text("⚠️ Error: Invalid input format. Please provide chat_id on the first line and msg_count on the second line.")
+                await processing_message.edit_text("⚠️ Error: Invalid input format. Please provide chat_id on the first line, msg_count on the second line, and optionally a third line.")
                 return
 
             # Основная логика Pyrogram
@@ -265,15 +255,16 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     progress = int((len(messages) / msg_count) * progress_bar_length)  # 20 символов в прогресс-баре
                     progress_bar = f"{'█' * progress}{'░' * (progress_bar_length - progress)}" 
                     
-                    remaining_sec = round((msg_count - len(messages)) * delay_TG, 1)  # Оставшееся время в секундах
-                    remaining_time_str = f"{remaining_sec} sec"  # Форматируем оставшееся время
-                    if remaining_sec >= 60:
-                        remaining_time_str = f"{remaining_sec // 60} min {remaining_sec % 60} sec"
+                    remaining_sec = int((msg_count - len(messages)) * delay_TG)  # Оставшееся время в секундах
+                    if remaining_sec <= 60:
+                        remaining_time_str = f"{remaining_sec} sec"
+                    else:
+                         remaining_time_str = f"{remaining_sec // 60} min {remaining_sec % 60} sec"
                     
 
                     # Обновляем сообщение с прогрессом
                     await processing_message.edit_text(
-                        result + f"\n⏳ Loading... {len(messages)}/{msg_count} apx {remaining_time_str} left\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%",
+                        result + f"\n⏳ Loading...\n {len(messages)}/{msg_count} done ~{remaining_time_str} left\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%",
                         parse_mode="HTML"
                     )
                     await asyncio.sleep(delay_TG)  # Задержка между запросами для предотвращения превышения лимита API
@@ -343,7 +334,11 @@ async def echo(update: Update, context: CallbackContext) -> None:
                         result += f"🔝 <a href='{first_message_link}'>First message</a> {time_since_str}" if first_message_link else f"🔝 First message was sent {time_since_str}, but link is unavailable"
                         result += f"<blockquote expandable>{shortened_history}</blockquote>"
 
-                        await process_ai_summary(update, processing_message)
+                        # await process_ai_summary(update)
+                        
+                        # if AI_question:
+                        #     await AI_answer(update, context)
+                        await AI_answer(update, context, AI_question=AI_question)
 
                 else:
                     result = f"⚠️ The chat with ID {chat_id} is empty or unavailable."
@@ -359,15 +354,43 @@ async def echo(update: Update, context: CallbackContext) -> None:
 
 
 
-# Новая функция для обработки AI Summary
-async def process_ai_summary(update: Update, processing_message) -> None:
-    result = "🤖 AI Summary:\n"
+
+
+#AI Summary
+# async def process_ai_summary(update: Update) -> None:
+#     global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
+#     result = "🤖 AI Summary:\n"
+#     processing_message = await update.message.reply_text(f"{result}\nLoading...", parse_mode="HTML")
+
+#     # Отправляем запрос в Geminy
+#     try:
+#         ai_response = AI_client.models.generate_content(
+#             model="gemini-2.0-flash",
+#             contents=f"{AI_default_prompt}\n\n{my_chat_histoty}",
+#         )
+#         response = ai_response if isinstance(ai_response, str) else ai_response.text
+#         result += f"<blockquote>{bleach.clean(markdown.markdown(response), tags=allowed_tags, strip=True)}</blockquote>"
+#     except Exception as e:
+#         result += f"⚠️ Error: {e}"
+    
+#     # Редактируем сообщение после завершения обработки
+#     await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
+
+
+# AI ответ на сообщение
+async def AI_answer(update: Update, context: CallbackContext, AI_question) -> None:
+    global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
+
+    # AI_prompt_in_message = update.message.text
+    print("\n💬 [ AI answer ]")
+    result = "🤖 AI answer:\n"
+    processing_message = await update.message.reply_text(result+"⏳ Loading...", parse_mode="HTML") #, reply_to_message_id=update.message.message_id
 
     # Отправляем запрос в Geminy
     try:
         ai_response = AI_client.models.generate_content(
             model="gemini-2.0-flash",
-            contents=f"{AI_prompt}\n\n{my_chat_histoty}",
+            contents=f"{AI_question}\n\n{my_chat_histoty}",
         )
         response = ai_response if isinstance(ai_response, str) else ai_response.text
         result += f"<blockquote>{bleach.clean(markdown.markdown(response), tags=allowed_tags, strip=True)}</blockquote>"
@@ -376,7 +399,6 @@ async def process_ai_summary(update: Update, processing_message) -> None:
     
     # Редактируем сообщение после завершения обработки
     await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
-
 
 
 
