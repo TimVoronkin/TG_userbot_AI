@@ -383,6 +383,8 @@ def log_to_console(update: Update) -> None:
     if update.message.from_user.username != admin_username:
         print(f"⚠️ Message from an unknown user. Ignored.")
 
+
+
 async def notify_admin_on_startup(application: Application) -> None:
     try:
         await application.bot.send_message(chat_id=f"@{admin_username}", text="🚀 Script updated and started!")
@@ -416,13 +418,18 @@ def main() -> None:
     ai_clean -  test. Clear the AI dialogue history
     '''
 
+    # Функция для отправки уведомления после инициализации
+    async def on_startup(application: Application) -> None:
+        await notify_admin_on_startup(application)
 
+    TGbot_app.post_init(on_startup)
+
+    
     # Запускаем клиента Pyrogram
     TGuserbot_app.start()  # Открываем соединение с Pyrogram
 
     try:
 
-        TGbot_app.create_task(notify_admin_on_startup(TGbot_app))
 
         # Запускаем бота
         TGbot_app.run_polling()
