@@ -423,7 +423,7 @@ def main() -> None:
 
     try:
 
-        TGbot_app.run_async(send_initial_message(TGbot_app))
+        asyncio.run(send_initial_message(TGbot_app))
         # Запускаем бота
         TGbot_app.run_polling()
         
