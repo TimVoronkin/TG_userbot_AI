@@ -17,7 +17,7 @@ from google import genai  # библиотека для работы с Geminy
 
 # ДЛЯ ЗАПУСКА В HEROKU
 import os
-admin_id = os.getenv("admin_id")
+admin_id = int(os.getenv("admin_id"))
 TG_api_id = os.getenv("TG_api_id")
 TG_api_hash = os.getenv("TG_api_hash")
 TGbot_token = os.getenv("TGbot_token")
