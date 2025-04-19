@@ -1,6 +1,8 @@
 from pyrogram import Client  # type: ignore
 from pyrogram.errors import PeerIdInvalid  # type: ignore
 from pyrogram.enums import ChatType  # Импортируем перечисление типов чатов
+from pyrogram.raw.functions.messages import GetDialogs
+from pyrogram.raw.types import InputPeerEmpty
 import telegram
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
@@ -122,10 +124,22 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
         except ValueError:
             limit = 5
 
+        # Определяем фильтры
+        filter_type = context.args[1] if len(context.args) > 1 else None  # Второй аргумент для фильтрации
+
         try:
-            # Получаем последние чаты
             dialogs = []
+
+            # Получаем обычные чаты
             async for dialog in userbotTG_client.get_dialogs(limit=limit):
+                # Фильтр по типу чата
+                if filter_type:
+                    if filter_type == "private" and dialog.chat.type != ChatType.PRIVATE:
+                        continue
+                    elif filter_type == "group" and dialog.chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
+                        continue
+                    elif filter_type == "channel" and dialog.chat.type != ChatType.CHANNEL:
+                        continue
 
                 display_name = dialog.chat.title if dialog.chat.title else (dialog.chat.first_name or '') + ' ' + (dialog.chat.last_name or '')
                 icon, direct_link = get_chat_icon_and_link(dialog.chat)
@@ -133,7 +147,7 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
 
             # Формируем результат
             if dialogs:
-                result = f"Recent {limit} chats:\n\n" + "\n".join(dialogs)
+                result = f"Recent {limit} {filter_type + ' 'if filter_type else ''}chats:\n\n" + "\n".join(dialogs)
             else:
                 result = "⚠️ No available chats"
         except Exception as e:
@@ -419,7 +433,7 @@ def main() -> None:
     botTG_client.add_handler(MessageHandler(filters.ALL, log_message))
     
     ''' Для телеграм бота команды:
-    list - <n> show recent chats (default: 5 chats)
+    list - <n> <private/group/channel> show recent chats
     ping - check the bot's connectivity
     start - test
     id - test. get the ID of the replied message
