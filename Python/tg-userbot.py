@@ -49,6 +49,9 @@ async def start(update: Update, context: CallbackContext) -> None:
 # команда /ping
 async def ping(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
+    print("update.message.from_user.id: "+str(update.message.from_user.id))
+    print("admin_id: "+str(admin_id))
+    # Проверяем, что команда отправлена администратором
     if update.message.from_user.id == admin_id:
 
         results = []
