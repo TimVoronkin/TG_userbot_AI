@@ -13,15 +13,15 @@ from google import genai  # библиотека для работы с Geminy
 
 # Импортируем конфигурацию
 # ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА
-from config import admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
+# from config import admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
 
 # ДЛЯ ЗАПУСКА В HEROKU
-# import os
-# admin_id = os.getenv("admin_id")
-# TG_api_id = os.getenv("TG_api_id")
-# TG_api_hash = os.getenv("TG_api_hash")
-# TGbot_token = os.getenv("TGbot_token")
-# AI_api_key = os.getenv("AI_api_key")
+import os
+admin_id = os.getenv("admin_id")
+TG_api_id = os.getenv("TG_api_id")
+TG_api_hash = os.getenv("TG_api_hash")
+TGbot_token = os.getenv("TGbot_token")
+AI_api_key = os.getenv("AI_api_key")
 
 if not all([admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more configuration variables are missing!")
@@ -78,6 +78,37 @@ async def ping(update: Update, context: CallbackContext) -> None:
         # Send diagnostic results
         await processing_message.edit_text(f"Bot is working! 👌<blockquote expandable>{'\n'.join(results)}</blockquote>", parse_mode="HTML")
 
+def get_chat_icon_and_link(chat):
+    # Определяем иконку в зависимости от типа чата
+    if chat.type == ChatType.PRIVATE:
+        icon = "👤"
+        if chat.username: # Если есть юзернейм
+            direct_link = f"https://t.me/{chat.username}"
+        else:
+            direct_link = f"tg://user?id={chat.id}"
+    elif chat.type == ChatType.GROUP:
+        icon = "🫂"
+        direct_link = f"tg://join?invite={chat.invite_link}" if chat.invite_link else ""
+    elif chat.type == ChatType.SUPERGROUP:
+        icon = "👥"
+        if chat.username: # Если есть юзернейм
+            direct_link = f"https://t.me/{chat.username}"
+        else:
+            direct_link = f"https://t.me/c/{str(chat.id)[3:]}/-1"
+    elif chat.type == ChatType.CHANNEL:
+        icon = "📢"
+        if chat.username: # Если есть юзернейм
+            direct_link = f"https://t.me/{chat.username}"
+        else:
+            direct_link = f"https://t.me/c/{str(chat.id)[3:]}/-1"
+    elif chat.type == ChatType.BOT:
+        icon = "🤖"
+        direct_link = f"https://t.me/{chat.username}" if chat.username else ""
+    else:
+        icon = "❓"
+        direct_link = ""
+    return icon, direct_link
+
 # команда /list
 async def list_chats(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
@@ -92,30 +123,10 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
         try:
             # Получаем последние чаты
             dialogs = []
-            async for dialog in app.get_dialogs(limit=limit):  # Убрано использование async with
+            async for dialog in app.get_dialogs(limit=limit):
 
                 display_name = dialog.chat.title if dialog.chat.title else (dialog.chat.first_name or '') + ' ' + (dialog.chat.last_name or '')
-
-                # Определяем иконку в зависимости от типа чата
-                if dialog.chat.type == ChatType.PRIVATE:
-                    icon = "👤"
-                    direct_link = f"tg://user?id={dialog.chat.id}"
-                elif dialog.chat.type == ChatType.GROUP:
-                    icon = "🫂"
-                    direct_link = f"tg://join?invite={dialog.chat.invite_link}" if dialog.chat.invite_link else ""
-                elif dialog.chat.type == ChatType.SUPERGROUP:
-                    icon = "👥"
-                    direct_link = f"tg://join?invite={dialog.chat.invite_link}" if dialog.chat.invite_link else f"t.me/c/{str(dialog.chat.id)[3:]}/-1"
-                elif dialog.chat.type == ChatType.CHANNEL:
-                    icon = "📢"
-                    direct_link = f"tg://resolve?domain={dialog.chat.username}" if dialog.chat.username else f"t.me/c/{str(dialog.chat.id)[3:]}/-1"
-                elif dialog.chat.type == ChatType.BOT:
-                    icon = "🤖"
-                    direct_link = f"t.me/{dialog.chat.username}" if dialog.chat.username else ""
-                else:
-                    icon = "❓"
-                    direct_link = ""
-
+                icon, direct_link = get_chat_icon_and_link(dialog.chat)
                 dialogs.append(f"<a href='{direct_link}'>🆔 </a><code>{dialog.chat.id}</code>\n<a href='https://docs.pyrogram.org/api/enums/ChatType#pyrogram.enums.{dialog.chat.type}'>{icon}</a> {display_name}{f'\n🔗 @{dialog.chat.username}' if dialog.chat.username else ''}\n")
 
             # Формируем результат
@@ -210,13 +221,11 @@ async def echo(update: Update, context: CallbackContext) -> None:
         # ОТВЕТНОЕ СООБЩЕНИЕ
         if update.message.reply_to_message:
             await AI_answer(update, context, AI_question=update.message.text)  # Вызов функции AI_answer для обработки ответа на сообщение
-
-
-        
+                
         # СООБЩЕНИЕ ЗАПРОС
         else:
             # Отправляем сообщение
-            processing_message = await update.message.reply_text("⏳ Loading...")
+            processing_message = await update.message.reply_text("⏳ Loading...", parse_mode="HTML", disable_web_page_preview=True)
 
             # Читаем сообщение пользователя
             try:
@@ -241,8 +250,9 @@ async def echo(update: Update, context: CallbackContext) -> None:
             try:
                 # Получаем информацию о чате
                 chat = await app.get_chat(chat_id)  # Убрано использование async with
-                result = f"💬 ''{chat.title or chat.first_name}''\n🆔 <code>{chat_id}</code>\n#️⃣ last {msg_count} messages:\n"
-                await processing_message.edit_text(result + '\n⏳ Loading...', parse_mode="HTML")
+                icon, direct_link = get_chat_icon_and_link(chat)
+                result = f"<a href='{direct_link}'>{icon} ''{chat.title or chat.first_name}''</a>\n🆔 <code>{chat_id}</code>\n#️⃣ last {msg_count} messages:\n"
+                await processing_message.edit_text(result + '\n⏳ Loading...', parse_mode="HTML", disable_web_page_preview=True)
 
                 # Получаем последние сообщения из чата
                 messages = []
@@ -264,7 +274,8 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     # Обновляем сообщение с прогрессом
                     await processing_message.edit_text(
                         result + f"\n⏳ Loading...\n {len(messages)}/{msg_count} done ~{remaining_time_str} left\n<code>{progress_bar}</code> {round(len(messages) / msg_count * 100, 1)}%",
-                        parse_mode="HTML"
+                        parse_mode="HTML",
+                        disable_web_page_preview=True,
                     )
                     await asyncio.sleep(delay_TG)  # Задержка между запросами для предотвращения превышения лимита API
 
@@ -330,13 +341,9 @@ async def echo(update: Update, context: CallbackContext) -> None:
                         else:
                             time_since_str = "just now"
                     
-                        result += f"🔝 <a href='{first_message_link}'>First message</a> {time_since_str}" if first_message_link else f"🔝 First message was sent {time_since_str}, but link is unavailable"
+                        result += f"🔝 <a href='{first_message_link}'>First message</a> {time_since_str}" if first_message_link else f"🔝 First message was sent {time_since_str}"
                         result += f"<blockquote expandable>{shortened_history}</blockquote>"
 
-                        # await process_ai_summary(update)
-                        
-                        # if AI_question:
-                        #     await AI_answer(update, context)
                         await AI_answer(update, context, AI_question=AI_question)
 
                 else:
@@ -350,8 +357,6 @@ async def echo(update: Update, context: CallbackContext) -> None:
                 print(result)
 
             await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
-
-
 
 # AI ответ на сообщение
 async def AI_answer(update: Update, context: CallbackContext, AI_question) -> None:
@@ -377,10 +382,11 @@ async def AI_answer(update: Update, context: CallbackContext, AI_question) -> No
     await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
 
 
-# Логирование всех сообщений
+# все приходящие сообщения
 async def log_message(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
 
+# Логирование сообщений в консоль
 def log_to_console(update: Update) -> None:
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     username = update.message.from_user.username if update.message.from_user else "(Unknown user)"
@@ -404,8 +410,6 @@ async def send_message():
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
-
-
     # Инициализируем приложение
     application = Application.builder().token(TGbot_token).build()
 
