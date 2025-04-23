@@ -450,27 +450,53 @@ async def AI_answer(update: Update, context: CallbackContext, AI_question) -> No
 
 # все приходящие сообщения
 async def log_message(update: Update, context: CallbackContext) -> None:
+
+
     log_to_console(update)
+    
+
 
 # Логирование сообщений в консоль
 def log_to_console(update: Update) -> None:
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    username = update.message.from_user.username if update.message.from_user else "(Unknown user)"
+    username = f"@{update.message.from_user.username}" if update.message.from_user.username else "(no username)"
     message_text = update.message.text if update.message.text else "(non-text message)"
+    user_id = update.message.from_user.id if update.message.from_user else "(Unknown user ID)"
+    user_name = update.message.from_user.first_name or '' + ' ' + (update.message.from_user.last_name or '')
+
 
     # Выводим в консоль
-    print(f"\n🗨️ [{current_time} @{username}]\n{message_text}")
-    if update.message.from_user.id != admin_id:
-        print(f"⚠️ Message from an unknown user. Ignored.")
+    print(f"\n🗨️ [{current_time} {username}]\n{message_text}")
 
-# Отправляем начальное сообщение
-async def send_message():
+    if update.message.from_user.id != admin_id:
+        asyncio.create_task(send_message(f"⚠️ Message from an unknown user!\n 👤 {user_name}\n{username}\n🆔 <code>{user_id}</code>\nmessage:"))
+        asyncio.create_task(forward_message_to_admin(update))
+
+# Функция для пересылки сообщения администратору
+async def forward_message_to_admin(update: Update):
     bot = telegram.Bot(token=TGbot_token)
     try:
-        await bot.send_message(chat_id=admin_id, text="🚀 Script updated and started!")
-        print("💬 initial message sent to admin.")
+        # Используем copy_message для пересылки сообщения в том же виде
+        await bot.copy_message(
+            chat_id=admin_id,  # ID администратора
+            from_chat_id=update.message.chat_id,  # ID чата, откуда пришло сообщение
+            message_id=update.message.message_id  # ID сообщения для копирования
+        )
+        print(f"💬 Message forwarded to admin.")
     except Exception as e:
-        print(f"⚠️ Error sending message to admin (): {e}")
+        print(f"⚠️ Error forwarding message to admin: {e}")
+
+# Функция для отправки сообщения администратору
+async def send_message(text: str):
+    bot = telegram.Bot(token=TGbot_token)
+    try:
+        await bot.send_message(chat_id=admin_id, text=f"{text}", parse_mode="HTML")
+        print(f"💬 Message sent to admin: {text}")
+    except Exception as e:
+        print(f"⚠️ Error sending message to admin: {e}")
+        
+
+
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
@@ -508,7 +534,7 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
 
     # Отправляем начальное сообщение
-    loop.run_until_complete(send_message())
+    loop.run_until_complete(send_message("🚀 Script updated and started!"))
 
     # Запускаем клиента Pyrogram
     userbotTG_client.start()  # Открываем соединение с Pyrogram
