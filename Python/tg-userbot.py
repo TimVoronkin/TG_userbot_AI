@@ -11,19 +11,19 @@ import asyncio
 import markdown # type: ignore
 import bleach # type: ignore
 allowed_tags = ['b', 'i', 'u', 'code', 'pre', 'a', 'blockquote']
-from google import genai  # библиотека для работы с Geminy
+from google import genai
 
 # Импортируем конфигурацию
 # ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА
-# from config import admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
+from config import admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
 
 # ДЛЯ ЗАПУСКА В HEROKU
 import os
-admin_id = int(os.getenv("admin_id"))
-TG_api_id = os.getenv("TG_api_id")
-TG_api_hash = os.getenv("TG_api_hash")
-TGbot_token = os.getenv("TGbot_token")
-AI_api_key = os.getenv("AI_api_key")
+# admin_id = int(os.getenv("admin_id"))
+# TG_api_id = os.getenv("TG_api_id")
+# TG_api_hash = os.getenv("TG_api_hash")
+# TGbot_token = os.getenv("TGbot_token")
+# AI_api_key = os.getenv("AI_api_key")
 
 if not all([admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more configuration variables are missing!")
@@ -79,8 +79,11 @@ async def ping(update: Update, context: CallbackContext) -> None:
             results.append(f"❌ Geminy AI client error: {e}")
 
         # Send diagnostic results
-        await processing_message.edit_text(f"Bot is working! 👌<blockquote expandable>{'\n'.join(results)}</blockquote>", parse_mode="HTML")
-
+        diagnostic_results = "\n".join(results)
+        await processing_message.edit_text(
+            "Bot is working! 👌<blockquote expandable>" + diagnostic_results + "</blockquote>",
+            parse_mode="HTML"
+        )
 # Получаем иконку и ссылку чата
 def get_chat_icon_and_link(chat):
     # Определяем иконку в зависимости от типа чата
@@ -143,8 +146,19 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
 
                 display_name = dialog.chat.title if dialog.chat.title else (dialog.chat.first_name or '') + ' ' + (dialog.chat.last_name or '')
                 icon, direct_link = get_chat_icon_and_link(dialog.chat)
-                dialogs.append(f"<a href='{direct_link}'>🆔 </a><code>{dialog.chat.id}</code>\n<a href='https://docs.pyrogram.org/api/enums/ChatType#pyrogram.enums.{dialog.chat.type}'>{icon}</a> {display_name}{f'\n🔗 @{dialog.chat.username}' if dialog.chat.username else ''}\n")
-
+                
+                dialogs.append(
+                    "<a href='{direct_link}'>🆔 </a><code>{chat_id}</code>\n"
+                    "<a href='https://docs.pyrogram.org/api/enums/ChatType#pyrogram.enums.{chat_type}'>{icon}</a> {display_name}"
+                    "{username_link}\n".format(
+                        direct_link=direct_link,
+                        chat_id=dialog.chat.id,
+                        chat_type=dialog.chat.type,
+                        icon=icon,
+                        display_name=display_name,
+                        username_link=f"\n🔗 @{dialog.chat.username}" if dialog.chat.username else ""
+                    )
+                )
             # Формируем результат
             if dialogs:
                 result = f"Recent {limit} {filter_type + ' 'if filter_type else ''}chats:\n\n" + "\n".join(dialogs)
@@ -441,9 +455,6 @@ def main() -> None:
     ai_clean -  test. Clear the AI dialogue history
     '''
 
-    # Запускаем клиента Pyrogram
-    userbotTG_client.start()  # Открываем соединение с Pyrogram
-
     try:
         # Запускаем бота
         botTG_client.run_polling()
@@ -454,5 +465,15 @@ def main() -> None:
 if __name__ == '__main__':
     print("🚀 Script started!")
     import asyncio
-    asyncio.run(send_message())  # Отправляем начальное сообщение
-    main()  # Запуск основного бота
+
+    # Создаём цикл событий
+    loop = asyncio.get_event_loop()
+
+    # Отправляем начальное сообщение
+    loop.run_until_complete(send_message())
+
+    # Запускаем клиента Pyrogram
+    userbotTG_client.start()  # Открываем соединение с Pyrogram
+
+    # Запускаем основного бота
+    main()
