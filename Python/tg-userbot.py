@@ -448,13 +448,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     
                     print(f"\n💾 Chat history '{file_path}' saved!")
                     
-                    # Отправляем файл админу
-                    await context.bot.send_document(
-                        chat_id=admin_id,
-                        document=open(file_path, "rb"),
-                        filename=file_path,
-                        caption=f"📄 Chat history for '{chat.title or chat.first_name}'"
-                    )
+
 
                     # Формируем сокращённую версию истории чата
                     # lines = my_chat_histoty.splitlines()
@@ -491,9 +485,6 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     
                         result += f"🔝 <a href='{first_message_link}'>First message</a> {time_since_str}" if first_message_link else f"🔝 First message was sent {time_since_str}"
                         result += f"<blockquote expandable>{shortened_history}</blockquote>"
-
-                        await AI_answer(update, context, AI_question=AI_question)
-
                 else:
                     result = f"⚠️ The chat with ID {chat_id} is empty or unavailable."
                     print(result)
@@ -505,6 +496,14 @@ async def echo(update: Update, context: CallbackContext) -> None:
                 print(result)
 
             await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
+            await context.bot.send_document(
+                chat_id=admin_id,
+                document=open(file_path, "rb"),
+                filename=file_path,
+                caption=f"📄 Chat history for '{chat.title or chat.first_name}'"
+            )
+            await AI_answer(update, context, AI_question=AI_question)
+
 
 # AI ответ на сообщение
 async def AI_answer(update: Update, context: CallbackContext, AI_question) -> None:
