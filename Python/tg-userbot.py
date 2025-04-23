@@ -7,6 +7,7 @@ import telegram
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from datetime import datetime
+import json
 import asyncio
 import markdown # type: ignore
 import bleach # type: ignore
@@ -43,12 +44,12 @@ my_chat_histoty = "No chat history available."
 
 # команда /start
 async def start(update: Update, context: CallbackContext) -> None:
-    log_to_console(update)
+    log_any_user(update)
     await update.message.reply_text('Hello World!')
 
 # команда /ping
 async def ping(update: Update, context: CallbackContext) -> None:
-    log_to_console(update)
+    log_any_user(update)
     print("update.message.from_user.id: "+str(update.message.from_user.id))
     print("admin_id: "+str(admin_id))
     # Проверяем, что команда отправлена администратором
@@ -84,6 +85,7 @@ async def ping(update: Update, context: CallbackContext) -> None:
             "Bot is working! 👌<blockquote expandable>" + diagnostic_results + "</blockquote>",
             parse_mode="HTML"
         )
+
 # Получаем иконку и ссылку чата
 def get_chat_icon_and_link(chat):
     # Определяем иконку в зависимости от типа чата
@@ -118,7 +120,7 @@ def get_chat_icon_and_link(chat):
 
 # команда /list
 async def list_chats(update: Update, context: CallbackContext) -> None:
-    log_to_console(update)
+    log_any_user(update)
     if update.message.from_user.id == admin_id:
         try:
             limit = int(context.args[0]) if len(context.args) > 0 else 5
@@ -211,7 +213,7 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
 
 # команда /ai
 async def ai_query(update: Update, context: CallbackContext) -> None:
-    log_to_console(update)
+    log_any_user(update)
     user_id = update.message.from_user.id  # Уникальный идентификатор пользователя
 
     if update.message.from_user.id == admin_id:
@@ -267,9 +269,36 @@ async def ai_clean(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text("🗑️ AI dialogue history cleared.")
     print("🗑️ AI dialogue history cleared.")
 
+# команда /json
+async def send_json(update: Update, context: CallbackContext) -> None:
+    log_any_user(update)
+    test_json = {
+        "name": "Test User",
+        "age": 25,
+        "email": "testuser@example.com",
+        "is_admin": False,
+        "preferences": {
+            "theme": "dark",
+            "notifications": True
+        }
+    }
+    # Сохраняем JSON в файл
+    file_path = "test_data.json"
+    with open(file_path, "w", encoding="utf-8") as file:
+        import json
+        json.dump(test_json, file, indent=4, ensure_ascii=False)
+
+    # Отправляем файл пользователю
+    await context.bot.send_document(
+        chat_id=update.message.chat_id,
+        document=open(file_path, "rb"),
+        filename="test_data.json",
+        caption="📄 Here is your test JSON file."
+    )
+
 # команда /id
 async def reply_id(update: Update, context: CallbackContext) -> None:
-    log_to_console(update)
+    log_any_user(update)
     if update.message.from_user.id == admin_id:
 
         if update.message.reply_to_message:
@@ -280,7 +309,7 @@ async def reply_id(update: Update, context: CallbackContext) -> None:
 
 # Основные сообщения
 async def echo(update: Update, context: CallbackContext) -> None:
-    log_to_console(update)
+    log_any_user(update)
     # Проверка, что сообщение отправлено мной
     if update.message.from_user.id == admin_id:
         global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
@@ -347,9 +376,9 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     await asyncio.sleep(delay_TG)  # Задержка между запросами для предотвращения превышения лимита API
 
                 if messages:
-                    my_chat_histoty = ""  # Переменная для хранения истории чата
+                    my_chat_histoty = []  # Переменная для хранения истории чата в виде списка
                     for msg in reversed(messages):  # Переворачиваем список для вывода в порядке от старых к новым
-                        sender_name = msg.from_user.first_name if msg.from_user else "Unknown user"
+                        sender_name = msg.from_user.first_name if msg.from_user else "Unknown_user"
                         message_time = msg.date.strftime('%Y-%m-%d %H:%M') if msg.date else "Unknown time"
 
                         # Определяем тип сообщения
@@ -381,17 +410,69 @@ async def echo(update: Update, context: CallbackContext) -> None:
                         else:
                             content = "(unknown message type)"
 
-                        # Формируем строку для текущего сообщения
-                        my_chat_histoty += f"[{sender_name} at {message_time}]:\n{content}\n\n"
+                        # Добавляем сообщение в список
+                        my_chat_histoty.append({
+                            "sender": sender_name,
+                            "time": message_time,
+                            "content": content
+                        })
+
+                    # Сохраняем историю в JSON-файл
+                    file_path = f"tg_{msg_count}-msgs-from-{chat.title or chat.first_name}.json"
+                    
+                    # Формируем данные для сохранения
+                    chat_json_data = {
+                        "chat_title": chat.title or chat.first_name or "Unknown Chat",
+                        "chat_type": chat.type.name if chat.type else "Unknown Type",
+                        "link": direct_link,
+                        "messages": my_chat_histoty
+                        # "participants": []
+                    }
+                    
+                    # Если это группа или супергруппа, добавляем участников
+                    # if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+                    #     async for member in userbotTG_client.get_chat_members(chat.id):
+                    #         chat_data["participants"].append({
+                    #             "user_id": member.user.id,
+                    #             "first_name": member.user.first_name,
+                    #             "last_name": member.user.last_name,
+                    #             "username": member.user.username
+                    #         })
+                    
+                    # Добавляем историю сообщений
+
+                    
+                    # Сохраняем данные в JSON-файл
+                    with open(file_path, "w", encoding="utf-8") as file:
+                        json.dump(chat_json_data, file, indent=4, ensure_ascii=False)
+                    
+                    print(f"\n💾 Chat history '{file_path}' saved!")
+                    
+                    # Отправляем файл админу
+                    await context.bot.send_document(
+                        chat_id=admin_id,
+                        document=open(file_path, "rb"),
+                        filename=file_path,
+                        caption=f"📄 Chat history for '{chat.title or chat.first_name}'"
+                    )
 
                     # Формируем сокращённую версию истории чата
-                    lines = my_chat_histoty.splitlines()
-                    if len(lines) > lines_crop * 2:
-                        # Берём первые 20 строк, добавляем информацию о количестве строк, и последние 20 строк
-                        shortened_history = "\n".join(lines[:lines_crop]) + f"\n\n...and {len(lines) - lines_crop * 2} more lines...\n\n\n" + "\n".join(lines[-lines_crop:])
-                    else:
-                        # Если строк меньше 40, отправляем всё
-                        shortened_history = my_chat_histoty
+                    # lines = my_chat_histoty.splitlines()
+                    # if len(lines) > lines_crop * 2:
+                    #     # Берём первые 20 строк, добавляем информацию о количестве строк, и последние 20 строк
+                    #     shortened_history = "\n".join(lines[:lines_crop]) + f"\n\n...and {len(lines) - lines_crop * 2} more lines...\n\n\n" + "\n".join(lines[-lines_crop:])
+                    # else:
+                    #     # Если строк меньше 40, отправляем всё
+                    #     shortened_history = my_chat_histoty
+
+                    # Формируем сокращённую версию истории чата
+                    shortened_history = "\n".join([
+                        f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
+                        for msg in my_chat_histoty[-lines_crop:]
+                    ])
+                    if len(shortened_history) > 4096:
+                        shortened_history = shortened_history[:4096] + "... (truncated)"
+
 
                     if messages:
                         first_message = messages[-1]
@@ -451,19 +532,15 @@ async def AI_answer(update: Update, context: CallbackContext, AI_question) -> No
 # все приходящие сообщения
 async def log_message(update: Update, context: CallbackContext) -> None:
 
-
-    log_to_console(update)
+    log_any_user(update)
     
-
-
 # Логирование сообщений в консоль
-def log_to_console(update: Update) -> None:
+def log_any_user(update: Update) -> None:
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     username = f"@{update.message.from_user.username}" if update.message.from_user.username else "(no username)"
     message_text = update.message.text if update.message.text else "(non-text message)"
     user_id = update.message.from_user.id if update.message.from_user else "(Unknown user ID)"
     user_name = update.message.from_user.first_name or '' + ' ' + (update.message.from_user.last_name or '')
-
 
     # Выводим в консоль
     print(f"\n🗨️ [{current_time} {username}]\n{message_text}")
@@ -506,6 +583,7 @@ def main() -> None:
     botTG_client.add_handler(CommandHandler("list", list_chats))
     botTG_client.add_handler(CommandHandler("ai", ai_query))
     botTG_client.add_handler(CommandHandler("ai_clean", ai_clean))
+    botTG_client.add_handler(CommandHandler("json", send_json))
     botTG_client.add_handler(CommandHandler("id", reply_id))
     botTG_client.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
     botTG_client.add_handler(MessageHandler(filters.ALL, log_message))
