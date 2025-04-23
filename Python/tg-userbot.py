@@ -22,7 +22,7 @@ import os
 # admin_id = int(os.getenv("admin_id"))
 # TG_api_id = os.getenv("TG_api_id")
 # TG_api_hash = os.getenv("TG_api_hash")
-# TGbot_token = os.getenv("TGbot_token")
+# TGbot_token = os.getenv("TGbot_token"))
 # AI_api_key = os.getenv("AI_api_key")
 
 if not all([admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
@@ -95,7 +95,7 @@ def get_chat_icon_and_link(chat):
             direct_link = f"tg://user?id={chat.id}"
     elif chat.type == ChatType.GROUP:
         icon = "🫂"
-        direct_link = f"tg://join?invite={chat.invite_link}" if chat.invite_link else ""
+        direct_link = f"https://t.me/joinchat/{chat.invite_link}" if chat.invite_link else ""
     elif chat.type == ChatType.SUPERGROUP:
         icon = "👥"
         if chat.username: # Если есть юзернейм
@@ -121,20 +121,50 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
     log_to_console(update)
     if update.message.from_user.id == admin_id:
         try:
-            limit = int(context.args[0]) if context.args else 5
+            limit = int(context.args[0]) if len(context.args) > 0 else 5
             if limit <= 0:
                 limit = 5
         except ValueError:
             limit = 5
 
         # Определяем фильтры
-        filter_type = context.args[1] if len(context.args) > 1 else None  # Второй аргумент для фильтрации
+        filter_mapping = {
+            "p": "private",
+            "private": "private",
+            "приватные": "private",
+            "личные": "private",
+            "личка": "private",
+            "лс": "private",
+            "особисті": "private",
+            "директ": "private",
+            "dm": "private",
+            "дм": "private",
 
+            "g": "group",
+            "group": "group",
+            "groups": "group",
+            "chat": "group",
+            "чат": "group",
+            "чаты": "group",
+            "група": "group",
+            "групи": "group",
+            "группы": "group",
+
+            "c": "channel",
+            "channel": "channel",
+            "channels": "channel",
+            "канал": "channel",
+            "каналы": "channel",
+            "каналчики": "channel",
+            "тгк": "channel"
+            }
+        filter_type = context.args[1].lower() if len(context.args) > 1 else None
+        filter_type = filter_mapping.get(filter_type, None)  # Преобразуем значение через словарь
+        
         try:
             dialogs = []
-
-            # Получаем обычные чаты
-            async for dialog in userbotTG_client.get_dialogs(limit=limit):
+            fetched_count = 0  # Счётчик полученных диалогов
+            async for dialog in userbotTG_client.get_dialogs():
                 # Фильтр по типу чата
                 if filter_type:
                     if filter_type == "private" and dialog.chat.type != ChatType.PRIVATE:
@@ -144,6 +174,7 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
                     elif filter_type == "channel" and dialog.chat.type != ChatType.CHANNEL:
                         continue
 
+                # Добавляем подходящий диалог в список
                 display_name = dialog.chat.title if dialog.chat.title else (dialog.chat.first_name or '') + ' ' + (dialog.chat.last_name or '')
                 icon, direct_link = get_chat_icon_and_link(dialog.chat)
                 
@@ -159,6 +190,13 @@ async def list_chats(update: Update, context: CallbackContext) -> None:
                         username_link=f"\n🔗 @{dialog.chat.username}" if dialog.chat.username else ""
                     )
                 )
+
+                fetched_count += 1
+
+                # Прерываем, если достигли лимита
+                if len(dialogs) >= limit:
+                    break
+
             # Формируем результат
             if dialogs:
                 result = f"Recent {limit} {filter_type + ' 'if filter_type else ''}chats:\n\n" + "\n".join(dialogs)
