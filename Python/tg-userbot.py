@@ -14,23 +14,22 @@ import bleach # type: ignore
 allowed_tags = ['b', 'i', 'u', 'code', 'pre', 'a', 'blockquote']
 from google import genai
 
-# Импортируем конфигурацию
 # ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА
-# from config import admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
+from config import admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
 
 # ДЛЯ ЗАПУСКА В HEROKU
-import os
-admin_id = int(os.getenv("admin_id"))
-TG_api_id = os.getenv("TG_api_id")
-TG_api_hash = os.getenv("TG_api_hash")
-TGbot_token = os.getenv("TGbot_token")
-AI_api_key = os.getenv("AI_api_key")
+# import os
+# admin_id = int(os.getenv("admin_id"))
+# TG_api_id = os.getenv("TG_api_id")
+# TG_api_hash = os.getenv("TG_api_hash")
+# TGbot_token = os.getenv("TGbot_token")
+# AI_api_key = os.getenv("AI_api_key")
 
 if not all([admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more configuration variables are missing!")
 
 AI_default_prompt = "Очень коротко выдели главные темы, идеи, люди итд в этой переписке. Напиши пукнтами, без форматирования"
-lines_crop = 10 * 3  # Количество строк для отображения в сокращённой версии истории чата. 3 потому что обычно 3 строки на сообщение
+lines_crop = 10  # Количество строк для отображения в сокращённой версии истории чата. 3 потому что обычно 3 строки на сообщение
 delay_TG = 0.5  # Задержка между запросами для предотвращения превышения лимита API Telegram
 
 # Инициализация клиентов
@@ -428,18 +427,6 @@ async def echo(update: Update, context: CallbackContext) -> None:
                         "messages": my_chat_histoty
                         # "participants": []
                     }
-                    
-                    # Если это группа или супергруппа, добавляем участников
-                    # if chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
-                    #     async for member in userbotTG_client.get_chat_members(chat.id):
-                    #         chat_data["participants"].append({
-                    #             "user_id": member.user.id,
-                    #             "first_name": member.user.first_name,
-                    #             "last_name": member.user.last_name,
-                    #             "username": member.user.username
-                    #         })
-                    
-                    # Добавляем историю сообщений
 
                     
                     # Сохраняем данные в JSON-файл
@@ -447,25 +434,21 @@ async def echo(update: Update, context: CallbackContext) -> None:
                         json.dump(chat_json_data, file, indent=4, ensure_ascii=False)
                     
                     print(f"\n💾 Chat history '{file_path}' saved!")
-                    
-
 
                     # Формируем сокращённую версию истории чата
-                    # lines = my_chat_histoty.splitlines()
-                    # if len(lines) > lines_crop * 2:
-                    #     # Берём первые 20 строк, добавляем информацию о количестве строк, и последние 20 строк
-                    #     shortened_history = "\n".join(lines[:lines_crop]) + f"\n\n...and {len(lines) - lines_crop * 2} more lines...\n\n\n" + "\n".join(lines[-lines_crop:])
-                    # else:
-                    #     # Если строк меньше 40, отправляем всё
-                    #     shortened_history = my_chat_histoty
-
-                    # Формируем сокращённую версию истории чата
-                    shortened_history = "\n".join([
-                        f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
-                        for msg in my_chat_histoty[-lines_crop:]
-                    ])
-                    if len(shortened_history) > 4096:
-                        shortened_history = shortened_history[:4096] + "... (truncated)"
+                    if len(my_chat_histoty) > lines_crop * 2:
+                        shortened_history = "\n".join([
+                            f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
+                            for msg in my_chat_histoty[:lines_crop]
+                        ]) + f"\n... and {len(my_chat_histoty) - (lines_crop * 2)} more lines ...\n\n" + "\n".join([
+                            f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
+                            for msg in my_chat_histoty[-lines_crop:]
+                        ])
+                    else:
+                        shortened_history = "\n".join([
+                            f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
+                            for msg in my_chat_histoty
+                        ])
 
 
                     if messages:
@@ -500,7 +483,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
                 chat_id=admin_id,
                 document=open(file_path, "rb"),
                 filename=file_path,
-                caption=f"📄 Chat history for '{chat.title or chat.first_name}'"
+                caption=f"📄 Chat history from  '{chat.title or chat.first_name}'"
             )
             await AI_answer(update, context, AI_question=AI_question)
 
