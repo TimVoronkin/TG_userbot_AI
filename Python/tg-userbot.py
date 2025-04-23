@@ -16,15 +16,15 @@ from google import genai
 
 # Импортируем конфигурацию
 # ДЛЯ ЛОКАЛЬНОГО ЗАПУСКА
-from config import admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
+# from config import admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key
 
 # ДЛЯ ЗАПУСКА В HEROKU
 import os
-# admin_id = int(os.getenv("admin_id"))
-# TG_api_id = os.getenv("TG_api_id")
-# TG_api_hash = os.getenv("TG_api_hash")
-# TGbot_token = os.getenv("TGbot_token"))
-# AI_api_key = os.getenv("AI_api_key")
+admin_id = int(os.getenv("admin_id"))
+TG_api_id = os.getenv("TG_api_id")
+TG_api_hash = os.getenv("TG_api_hash")
+TGbot_token = os.getenv("TGbot_token")
+AI_api_key = os.getenv("AI_api_key")
 
 if not all([admin_id, TG_api_id, TG_api_hash, TGbot_token, AI_api_key]):
     raise ValueError("One or more configuration variables are missing!")
