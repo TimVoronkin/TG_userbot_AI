@@ -18,5 +18,5 @@ __pycache__/
 *.pyc
 
 # Игнорировать сессии Telegram
-!*.session
+*.session
 *.session-journal

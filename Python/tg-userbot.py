@@ -9,6 +9,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from datetime import datetime
 import json
 import asyncio
+import os
 import markdown # type: ignore
 import bleach # type: ignore
 allowed_tags = ['b', 'i', 'u', 'code', 'pre', 'a', 'blockquote']
@@ -479,12 +480,21 @@ async def echo(update: Update, context: CallbackContext) -> None:
                 print(result)
 
             await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
+
             await context.bot.send_document(
                 chat_id=admin_id,
                 document=open(file_path, "rb"),
                 filename=file_path,
                 caption=f"📄 Chat history from  '{chat.title or chat.first_name}'"
             )
+            
+            # Удаляем файл с рабочей папки
+            try:
+                os.remove(file_path)
+                print(f"🗑️ File '{file_path}' has been deleted from working folder")
+            except Exception as e:
+                print(f"⚠️ Error deleting file '{file_path}': {e}")
+
             await AI_answer(update, context, AI_question=AI_question)
 
 
@@ -588,7 +598,6 @@ def main() -> None:
 
 if __name__ == '__main__':
     print("🚀 Script started!")
-    import asyncio
 
     # Создаём цикл событий
     loop = asyncio.get_event_loop()
