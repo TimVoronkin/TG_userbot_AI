@@ -436,39 +436,50 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     
                     print(f"\n💾 Chat history '{file_path}' saved!")
 
-                    # Формируем сокращённую версию истории чата
-                    if len(my_chat_histoty) > lines_crop * 2:
-                        shortened_history = "\n".join([
-                            f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
-                            for msg in my_chat_histoty[:lines_crop]
-                        ]) + f"\n... and {len(my_chat_histoty) - (lines_crop * 2)} more lines ...\n\n" + "\n".join([
-                            f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
-                            for msg in my_chat_histoty[-lines_crop:]
-                        ])
+
+                    first_message = messages[-1]
+                    first_message_link = f"https://t.me/c/{str(chat.id)[3:]}/{first_message.id}" if chat.type in [ChatType.SUPERGROUP, ChatType.CHANNEL] else ""
+                    time_since_first_message = datetime.now() - first_message.date
+                
+                    # Форматируем время в зависимости от продолжительности
+                    if time_since_first_message.days > 0:
+                        time_since_str = f"{time_since_first_message.days} days ago"
+                    elif time_since_first_message.seconds >= 3600:
+                        time_since_str = f"{time_since_first_message.seconds // 3600} hours ago"
+                    elif time_since_first_message.seconds >= 60:
+                        time_since_str = f"{time_since_first_message.seconds // 60} minutes ago"
                     else:
-                        shortened_history = "\n".join([
+                        time_since_str = "just now"
+                
+                    result += f"🔝 <a href='{first_message_link}'>First message</a> {time_since_str}" if first_message_link else f"🔝 First message was sent {time_since_str}"
+    
+
+                    chat_history_preview = ""
+                    lines_count = 1
+                    print(f"is {len(result)} + {len(my_chat_histoty)} < 4096 ?")
+                    if len(result) + len(my_chat_histoty) < 4096:
+                        print("yes\n")
+                        chat_history_preview = "\n".join([
                             f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
                             for msg in my_chat_histoty
                         ])
+                    else:
+                        print("no")
+                        while len(result)+len(chat_history_preview) < 4096:
+                            chat_history_preview = "\n".join([
+                                f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
+                                for msg in my_chat_histoty[:lines_count]
+                                ]) + f"\n... and {len(my_chat_histoty) - (lines_count * 2)} more lines ...\n\n" + "\n".join([
+                                f"[{msg['sender']} at {msg['time']}]:\n{msg['content']}\n"
+                                for msg in my_chat_histoty[-lines_count:]
+                            ])
+                            lines_count += 1
+                            print(f"lines_count: {lines_count}")
+                            print(f"shortened_history len: {len(chat_history_preview)}")
 
+                    print(f"{len(result)} + {len(my_chat_histoty)} < 4096\n")
+                    result += f"<blockquote expandable>{chat_history_preview}</blockquote>"
 
-                    if messages:
-                        first_message = messages[-1]
-                        first_message_link = f"https://t.me/c/{str(chat.id)[3:]}/{first_message.id}" if chat.type in [ChatType.SUPERGROUP, ChatType.CHANNEL] else ""
-                        time_since_first_message = datetime.now() - first_message.date
-                    
-                        # Форматируем время в зависимости от продолжительности
-                        if time_since_first_message.days > 0:
-                            time_since_str = f"{time_since_first_message.days} days ago"
-                        elif time_since_first_message.seconds >= 3600:
-                            time_since_str = f"{time_since_first_message.seconds // 3600} hours ago"
-                        elif time_since_first_message.seconds >= 60:
-                            time_since_str = f"{time_since_first_message.seconds // 60} minutes ago"
-                        else:
-                            time_since_str = "just now"
-                    
-                        result += f"🔝 <a href='{first_message_link}'>First message</a> {time_since_str}" if first_message_link else f"🔝 First message was sent {time_since_str}"
-                        result += f"<blockquote expandable>{shortened_history}</blockquote>"
                 else:
                     result = f"⚠️ The chat with ID {chat_id} is empty or unavailable."
                     print(result)
@@ -480,6 +491,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
                 print(result)
 
             await processing_message.edit_text(result, parse_mode="HTML", disable_web_page_preview=True)
+            print("\n💬 [ chat preview ]")
 
             await context.bot.send_document(
                 chat_id=admin_id,
@@ -487,7 +499,9 @@ async def echo(update: Update, context: CallbackContext) -> None:
                 filename=file_path,
                 caption=f"📄 Chat history from  '{chat.title or chat.first_name}'"
             )
-            
+            print("💬 [ chat history file ]")
+
+
             # Удаляем файл с рабочей папки
             try:
                 os.remove(file_path)
@@ -503,7 +517,7 @@ async def AI_answer(update: Update, context: CallbackContext, AI_question) -> No
     global my_chat_histoty  # Указываем, что будем использовать глобальную переменную
 
     # AI_prompt_in_message = update.message.text
-    print("\n💬 [ AI answer ]")
+    print("💬 [ AI answer ]")
     result = "🤖 AI answer:\n"
     processing_message = await update.message.reply_text(result+"⏳ Loading...", parse_mode="HTML") #, reply_to_message_id=update.message.message_id
 
