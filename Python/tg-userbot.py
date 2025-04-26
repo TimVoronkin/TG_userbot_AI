@@ -342,6 +342,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
                 await processing_message.edit_text("⚠️ Error: Invalid input format. Please provide chat_id on the first line, msg_count on the second line, and optionally a third line.")
                 return
 
+
             # Основная логика Pyrogram
             try:
                 # Получаем информацию о чате
@@ -579,7 +580,14 @@ async def send_message(text: str):
         print(f"⚠️ Error sending message to admin: {e}")
         
 
-
+async def preload_dialogs():
+    try:
+        print("⏳ Preloading dialogs...")
+        async for _ in userbotTG_client.get_dialogs():
+            pass  # Просто итерируемся, чтобы загрузить все диалоги в кэш
+        print("✅ Dialogs preloaded successfully!")
+    except Exception as e:
+        print(f"⚠️ Error preloading dialogs: {e}")
 
 # Основная функция для запуска Telegram-бота
 def main() -> None:
@@ -604,6 +612,7 @@ def main() -> None:
     '''
 
     try:
+        # Предварительная загрузка диалогов
         # Запускаем бота
         botTG_client.run_polling()
     finally:
@@ -621,6 +630,8 @@ if __name__ == '__main__':
 
     # Запускаем клиента Pyrogram
     userbotTG_client.start()  # Открываем соединение с Pyrogram
+    
+    loop.run_until_complete(preload_dialogs())
 
     # Запускаем основного бота
     main()
