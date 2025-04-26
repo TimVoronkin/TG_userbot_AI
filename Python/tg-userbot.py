@@ -418,8 +418,18 @@ async def echo(update: Update, context: CallbackContext) -> None:
                             "content": content
                         })
 
-                    # Сохраняем историю в JSON-файл
-                    file_path = f"tg_{msg_count}-msgs-from-{chat.title or chat.first_name}.json"
+                    try:
+                        simple_chat_name = AI_client.models.generate_content(
+                            model="gemini-2.0-flash",
+                            contents=f"answer only without problematic characters to write this: {chat.title or chat.first_name}",
+                        ).text.strip()
+                    except Exception as e:
+                        result += f"⚠️ Error: {e}"
+                        simple_chat_name = "chat"
+                    print(f"\nsimple_chat_name: {simple_chat_name}")
+
+                    # Имя json файла истории чата
+                    file_path = f"tg_{msg_count}-msgs-from-{simple_chat_name}.json"
                     
                     # Формируем данные для сохранения
                     chat_json_data = {
@@ -435,7 +445,7 @@ async def echo(update: Update, context: CallbackContext) -> None:
                     with open(file_path, "w", encoding="utf-8") as file:
                         json.dump(chat_json_data, file, indent=4, ensure_ascii=False)
                     
-                    print(f"\n💾 Chat history '{file_path}' saved!")
+                    print(f"💾 Chat history '{file_path}' saved!\n")
 
 
                     first_message = messages[-1]
@@ -630,7 +640,7 @@ if __name__ == '__main__':
 
     # Запускаем клиента Pyrogram
     userbotTG_client.start()  # Открываем соединение с Pyrogram
-    
+
     loop.run_until_complete(preload_dialogs())
 
     # Запускаем основного бота
